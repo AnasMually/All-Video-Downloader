@@ -12,6 +12,8 @@ data class DownloadProgressSample(
 
 /** Parses a stable machine-readable progress line emitted by yt-dlp. */
 object DownloadProgressParser {
+    private const val PREFIX = "__AVD_PROGRESS__"
+
     const val YT_DLP_TEMPLATE =
         "${PREFIX}%(progress.downloaded_bytes)s|%(progress.total_bytes)s|" +
             "%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s|" +
@@ -65,7 +67,6 @@ object DownloadProgressParser {
         .takeUnless { it.isEmpty() || it.equals("NA", ignoreCase = true) || it == "None" }
         ?.toDoubleOrNull()
 
-    private const val PREFIX = "__AVD_PROGRESS__"
     private const val FIELD_COUNT = 6
     private val PERCENT_PATTERN = Regex("([0-9]+(?:\\.[0-9]+)?)")
     private val STANDARD_PERCENT_PATTERN = Regex("\\[download]\\s+([0-9]+(?:\\.[0-9]+)?)%")
