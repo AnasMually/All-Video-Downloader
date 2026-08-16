@@ -1,10 +1,14 @@
 package com.anas_mugally.videodownloader
 
+import android.graphics.Color
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,6 +18,7 @@ import com.anas_mugally.videodownloader.ui.AllVideoDownloaderApp
 import com.anas_mugally.videodownloader.ui.AppLaunchData
 import com.anas_mugally.videodownloader.ui.MainViewModel
 import com.anas_mugally.videodownloader.ui.theme.DownloaderTheme
+import com.anas_mugally.videodownloader.domain.ThemeMode
 
 class MainActivity : ComponentActivity() {
     private var launchData by mutableStateOf(AppLaunchData())
@@ -25,6 +30,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = viewModel()
             val settings by mainViewModel.settings.collectAsStateWithLifecycle()
+            val systemDark = isSystemInDarkTheme()
+            val dark = when (settings.themeMode) {
+                ThemeMode.SYSTEM -> systemDark
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            SideEffect {
+                val transparent = Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(transparent, transparent) { dark },
+                    navigationBarStyle = SystemBarStyle.auto(transparent, transparent) { dark },
+                )
+            }
             DownloaderTheme(
                 themeMode = settings.themeMode,
                 dynamicColor = settings.dynamicColor,
