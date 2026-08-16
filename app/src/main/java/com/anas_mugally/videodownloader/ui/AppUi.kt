@@ -1,67 +1,229 @@
 package com.anas_mugally.videodownloader.ui
 
 import android.Manifest
+import android.content.ClipData
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
-import com.anas_mugally.videodownloader.domain.MediaFormat
+import com.anas_mugally.videodownloader.MainActivity
+import com.anas_mugally.videodownloader.R
+import com.anas_mugally.videodownloader.domain.DownloadTask
+import kotlinx.coroutines.flow.collectLatest
+
+data class AppLaunchData(
+    val sharedText: String = "",
+    val screen: String? = null,
+    val taskId: String? = null,
+    val play: Boolean = false,
+    val sequence: Long = 0L,
+)
+
+private enum class AppDestination(
+    @StringRes val label: Int,
+    val icon: ImageVector,
+) {
+    HOME(R.string.home, Icons.Default.Home),
+    DOWNLOADS(R.string.downloads, Icons.Default.Download),
+    SETTINGS(R.string.settings, Icons.Default.Settings),
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun AllVideoDownloaderApp(sharedUrl:String, vm:MainViewModel = viewModel()) {
-    val state by vm.state.collectAsStateWithLifecycle()
-    var selected by remember { mutableStateOf<MediaFormat?>(null) }
-    var audioOnly by remember { mutableStateOf(false) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(sharedUrl) { if (sharedUrl.isNotBlank()) vm.setUrl(sharedUrl) }
-    LaunchedEffect(Unit) { if (Build.VERSION.SDK_INT >= 33) permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
-    Scaffold(topBar={CenterAlignedTopAppBar(title={Text("All Video Downloader", fontWeight=FontWeight.SemiBold)}, actions={IconButton(onClick={}){Icon(Icons.Default.Settings,"الإعدادات")}})}) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding=PaddingValues(20.dp), verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            item { Text("نزّل الفيديو أو الصوت", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold); Text("YouTube • Facebook • Instagram • X • TikTok", color=MaterialTheme.colorScheme.onSurfaceVariant) }
-            item {
-                OutlinedTextField(
-                    value=state.url,
-                    onValueChange=vm::setUrl,
-                    modifier=Modifier.fillMaxWidth(),
-                    label={Text("الصق رابط الفيديو")},
-                    leadingIcon={Icon(Icons.Default.Link,null)},
-                    trailingIcon={ if(state.url.isNotBlank()) IconButton(onClick={vm.setUrl(""); selected=null}){Icon(Icons.Default.Close,"مسح")} },
-                    singleLine=true,
-                    shape=RoundedCornerShape(20.dp)
-                )
-            }
-            item { Button(onClick=vm::analyze,enabled=!state.loading && state.url.isNotBlank(),modifier=Modifier.fillMaxWidth().height(56.dp),shape=RoundedCornerShape(18.dp)){if(state.loading){CircularProgressIndicator(Modifier.size(22.dp),strokeWidth=2.dp);Spacer(Modifier.width(10.dp))};Text(if(state.loading)"جارٍ تحليل الرابط…" else "عرض الجودات") } }
-            state.error?.let { error -> item { Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)){Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.Error,null);Spacer(Modifier.width(12.dp));Text(error)}} } }
-            state.media?.let { media ->
-                item { ElevatedCard(shape=RoundedCornerShape(24.dp)){Column{AsyncImage(model=media.thumbnailUrl,contentDescription=null,modifier=Modifier.fillMaxWidth().height(190.dp));Column(Modifier.padding(16.dp)){Text(media.title,maxLines=2,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Bold);Text(media.extractor,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)}}} }
-                item { SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){SegmentedButton(selected=!audioOnly,onClick={audioOnly=false},shape=SegmentedButtonDefaults.itemShape(0,2),icon={Icon(Icons.Default.Movie,null)}){Text("فيديو")};SegmentedButton(selected=audioOnly,onClick={audioOnly=true},shape=SegmentedButtonDefaults.itemShape(1,2),icon={Icon(Icons.Default.Headphones,null)}){Text("صوت MP3")}} }
-                item { Text("اختر الجودة",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold) }
-                val shown = if(audioOnly) media.formats.filter{it.hasAudio && !it.hasVideo}.ifEmpty{media.formats.filter{it.hasAudio}} else media.formats.filter{it.hasVideo}
-                items(shown,key={it.formatId}) { format -> FormatRow(format,selected?.formatId==format.formatId){selected=format} }
-                item { Button(onClick={selected?.let{vm.download(it.formatId,audioOnly)}},enabled=selected!=null,modifier=Modifier.fillMaxWidth().height(58.dp),shape=RoundedCornerShape(18.dp)){Icon(Icons.Default.Download,null);Spacer(Modifier.width(8.dp));Text("بدء التنزيل")};Text("استخدم التطبيق فقط لتنزيل المحتوى الذي تملكه أو المسموح لك بتنزيله.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.padding(top=8.dp)) }
-            }
+@Composable
+fun AllVideoDownloaderApp(
+    launchData: AppLaunchData,
+    viewModel: MainViewModel,
+) {
+    val context = LocalContext.current
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val tasks by viewModel.tasks.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val engineState by viewModel.engineState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var destination by remember { mutableStateOf(AppDestination.HOME) }
+    var playingTaskId by remember { mutableStateOf<String?>(null) }
+    var enqueueAfterPermission by remember { mutableStateOf(false) }
+    var notificationsGranted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED,
+        )
+    }
+
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        notificationsGranted = granted
+        if (enqueueAfterPermission) {
+            enqueueAfterPermission = false
+            viewModel.enqueueSelectedDownload()
+            destination = AppDestination.DOWNLOADS
         }
+    }
+    val cookiesDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let(viewModel::importCookies)
+    }
+
+    LaunchedEffect(launchData.sequence) {
+        if (launchData.sharedText.isNotBlank()) {
+            viewModel.consumeSharedText(launchData.sharedText)
+            destination = AppDestination.HOME
+        }
+        if (launchData.screen == MainActivity.SCREEN_DOWNLOADS) {
+            destination = AppDestination.DOWNLOADS
+        }
+        if (launchData.play) playingTaskId = launchData.taskId
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            snackbarHostState.showSnackbar(context.getString(event.message))
+        }
+    }
+
+    val requestDownload = {
+        val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            enqueueAfterPermission = true
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.enqueueSelectedDownload()
+            destination = AppDestination.DOWNLOADS
+        }
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        if (destination == AppDestination.HOME) {
+                            context.getString(R.string.app_name)
+                        } else {
+                            context.getString(destination.label)
+                        },
+                    )
+                },
+                actions = {
+                    if (destination == AppDestination.HOME) {
+                        IconButton(onClick = { destination = AppDestination.SETTINGS }) {
+                            Icon(Icons.Default.Settings, contentDescription = context.getString(R.string.settings))
+                        }
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                AppDestination.entries.forEach { item ->
+                    NavigationBarItem(
+                        selected = destination == item,
+                        onClick = { destination = item },
+                        icon = { Icon(item.icon, contentDescription = null) },
+                        label = { Text(context.getString(item.label)) },
+                    )
+                }
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        when (destination) {
+            AppDestination.HOME -> HomeScreen(
+                contentPadding = padding,
+                state = state,
+                engineState = engineState,
+                onUrlChange = viewModel::setUrl,
+                onAnalyze = viewModel::analyze,
+                onKindSelected = viewModel::selectKind,
+                onFormatSelected = viewModel::selectFormat,
+                onDownload = requestDownload,
+            )
+
+            AppDestination.DOWNLOADS -> DownloadsScreen(
+                contentPadding = padding,
+                tasks = tasks,
+                onPause = viewModel::pause,
+                onResume = viewModel::resume,
+                onRetry = viewModel::retry,
+                onCancel = viewModel::cancel,
+                onDelete = viewModel::delete,
+                onClearFinished = viewModel::clearFinished,
+                onPlay = { task -> playingTaskId = task.id },
+                onShare = { task -> shareDownloadedMedia(context, task) },
+            )
+
+            AppDestination.SETTINGS -> SettingsScreen(
+                contentPadding = padding,
+                settings = settings,
+                engineState = engineState,
+                cookiesImported = state.cookiesImported,
+                notificationsGranted = notificationsGranted,
+                onWifiOnlyChanged = viewModel::setWifiOnly,
+                onDynamicColorChanged = viewModel::setDynamicColor,
+                onThemeModeChanged = viewModel::setThemeMode,
+                onOutputFolderSaved = viewModel::setOutputFolder,
+                onFileNameModeChanged = viewModel::setFileNameMode,
+                onAudioFormatChanged = viewModel::setAudioFormat,
+                onImportCookies = { cookiesDocument.launch(arrayOf("text/plain", "text/*")) },
+                onClearCookies = viewModel::clearCookies,
+                onRequestNotifications = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                },
+            )
+        }
+    }
+
+    val playerTask = playingTaskId?.let { id -> tasks.firstOrNull { it.id == id } }
+    if (playerTask?.outputUri != null) {
+        PlayerDialog(task = playerTask, onDismiss = { playingTaskId = null })
     }
 }
 
-@Composable private fun FormatRow(format:MediaFormat, selected:Boolean, onClick:()->Unit) {
-    val size=format.fileSize?.let{if(it>1_048_576)"%.1f MB".format(it/1_048_576.0) else "${it/1024} KB"} ?: "الحجم بعد البدء"
-    Surface(onClick=onClick,shape=RoundedCornerShape(18.dp),color=if(selected)MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,modifier=Modifier.fillMaxWidth()){
-        Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){RadioButton(selected,onClick=onClick);Spacer(Modifier.width(8.dp));Column(Modifier.weight(1f)){Text(format.label,fontWeight=FontWeight.SemiBold);Text("${format.extension.uppercase()} • $size",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)};if(selected)Icon(Icons.Default.CheckCircle,null,tint=MaterialTheme.colorScheme.primary)}
+private fun shareDownloadedMedia(context: Context, task: DownloadTask) {
+    val uri = task.outputUri?.let(Uri::parse) ?: return
+    val share = Intent(Intent.ACTION_SEND).apply {
+        type = task.outputMimeType ?: "*/*"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        clipData = ClipData.newUri(context.contentResolver, task.outputName ?: task.title, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
+    context.startActivity(
+        Intent.createChooser(share, context.getString(R.string.share_download)),
+    )
 }

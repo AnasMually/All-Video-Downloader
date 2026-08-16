@@ -2,37 +2,110 @@ package com.anas_mugally.videodownloader.data
 
 import com.anas_mugally.videodownloader.domain.MediaFormat
 import com.anas_mugally.videodownloader.domain.MediaInfo
+import com.anas_mugally.videodownloader.domain.UrlTools
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class YtDlpExtractor {
-    suspend fun extract(url: String): MediaInfo = withContext(Dispatchers.IO) {
-        require(url.startsWith("https://") || url.startsWith("http://")) { "أدخل رابطًا صحيحًا" }
+class YtDlpExtractor(private val runtime: YtDlpRuntime) {
+    suspend fun extract(rawUrl: String): MediaInfo {
+        val url = UrlTools.extractHttpUrl(rawUrl) ?: throw IllegalArgumentException("Invalid web link")
+        runtime.ensureReady()
+        return withContext(Dispatchers.IO) {
         val request = YoutubeDLRequest(url).apply {
-            addOption("--dump-single-json")
             addOption("--no-playlist")
             addOption("--no-warnings")
+            addOption("--socket-timeout", 20)
+            if (runtime.hasCookies()) addOption("--cookies", runtime.cookiesFile().absolutePath)
         }
         val info = YoutubeDL.getInstance().getInfo(request)
-        val formats = info.formats.orEmpty().mapNotNull { format ->
-            val id = format.formatId ?: return@mapNotNull null
-            val height = format.height
-            val video = format.vcodec != null && format.vcodec != "none"
-            val audio = format.acodec != null && format.acodec != "none"
-            if (!video && !audio) return@mapNotNull null
-            MediaFormat(
-                formatId = id,
-                label = when { video && height != null -> "${height}p"; audio -> "صوت"; else -> format.format ?: id },
-                extension = format.ext ?: "mp4",
-                height = height,
-                fileSize = format.fileSize,
-                hasVideo = video,
-                hasAudio = audio
+        val formats = info.formats.orEmpty()
+            .mapNotNull { format ->
+                val id = format.formatId ?: return@mapNotNull null
+                val video = !format.vcodec.isNullOrBlank() && format.vcodec != "none"
+                val audio = !format.acodec.isNullOrBlank() && format.acodec != "none"
+                if ((!video && !audio) || format.ext == "mhtml") return@mapNotNull null
+                val height = format.height.takeIf { it > 0 }
+                val width = format.width.takeIf { it > 0 }
+                val fps = format.fps.takeIf { it > 0 }
+                val audioBitrate = format.abr.takeIf { it > 0 }
+                val size = format.fileSize.takeIf { it > 0 }
+                    ?: format.fileSizeApproximate.takeIf { it > 0 }
+                MediaFormat(
+                    formatId = id,
+                    label = formatLabel(
+                        id = id,
+                        video = video,
+                        height = height,
+                        fps = fps,
+                        audioBitrate = audioBitrate,
+                        note = format.formatNote,
+                    ),
+                    extension = format.ext ?: if (video) "mp4" else "m4a",
+                    height = height,
+                    width = width,
+                    framesPerSecond = fps,
+                    audioBitrateKbps = audioBitrate,
+                    fileSize = size,
+                    hasVideo = video,
+                    hasAudio = audio,
+                )
+            }
+            .distinctBy(MediaFormat::formatId)
+            .sortedWith(
+                compareByDescending<MediaFormat>(MediaFormat::hasVideo)
+                    .thenByDescending { it.height ?: 0 }
+                    .thenByDescending { it.framesPerSecond ?: 0 }
+                    .thenByDescending { it.audioBitrateKbps ?: 0 },
             )
-        }.distinctBy { "${it.label}-${it.extension}-${it.hasVideo}-${it.hasAudio}" }
-            .sortedWith(compareByDescending<MediaFormat> { it.hasVideo }.thenByDescending { it.height ?: 0 })
-        MediaInfo(url, info.title ?: "فيديو", info.thumbnail, info.duration?.toLong(), info.extractor ?: "", formats)
+            .take(MAX_FORMATS)
+            .ifEmpty {
+                listOf(
+                    MediaFormat(
+                        formatId = "best",
+                        label = "Best",
+                        extension = "mp4",
+                        height = null,
+                        width = null,
+                        framesPerSecond = null,
+                        audioBitrateKbps = null,
+                        fileSize = null,
+                        hasVideo = true,
+                        hasAudio = true,
+                    ),
+                )
+            }
+        MediaInfo(
+            id = info.id,
+            sourceUrl = url,
+            title = info.title ?: info.fulltitle ?: "Media",
+            thumbnailUrl = info.thumbnail,
+            durationSeconds = info.duration.takeIf { it > 0 }?.toLong(),
+            extractor = info.extractor.orEmpty(),
+            formats = formats,
+        )
+        }
+    }
+
+    private fun formatLabel(
+        id: String,
+        video: Boolean,
+        height: Int?,
+        fps: Int?,
+        audioBitrate: Int?,
+        note: String?,
+    ): String = when {
+        video && height != null -> buildString {
+            append(height).append('p')
+            if (fps != null && fps >= 50) append(" · ").append(fps).append("fps")
+        }
+        !video && audioBitrate != null -> "$audioBitrate kbps"
+        !note.isNullOrBlank() -> note
+        else -> id
+    }
+
+    private companion object {
+        const val MAX_FORMATS = 80
     }
 }
