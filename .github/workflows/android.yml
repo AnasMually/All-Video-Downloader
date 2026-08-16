@@ -21,7 +21,9 @@ jobs:
       - name: Validate wrapper
         uses: gradle/actions/wrapper-validation@v4
       - name: Build, test and lint
-        run: ./gradlew --stacktrace :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
+      - name: Verify 16 KB native-library alignment
+        run: bash scripts/check-elf-alignment.sh app/build/outputs/apk/debug/app-debug.apk
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

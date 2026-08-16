@@ -60,4 +60,3 @@ class MainActivity : ComponentActivity() {
         const val SCREEN_DOWNLOADS = "downloads"
     }
 }
-

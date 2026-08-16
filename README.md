@@ -100,4 +100,3 @@ app/build/outputs/apk/debug/app-debug.apk
 ## الترخيص
 
 المشروع مرخّص تحت GNU GPL v3، والنص الكامل موجود في [LICENSE](LICENSE). تعتمد الحزمة على `youtubedl-android` ومكونات أصلية أخرى؛ راجع [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) قبل التوزيع.
-
