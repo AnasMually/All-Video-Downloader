@@ -23,7 +23,7 @@ object DownloadFormatTools {
             .lowercase(Locale.ROOT)
             .filter(Char::isLetterOrDigit)
             .ifBlank { if (task.kind == DownloadKind.AUDIO) "m4a" else "mp4" }
-        return "${stem.take(MAX_FILE_STEM_LENGTH)}.$safeExtension"
+        return "${stem.takeUtf8Bytes(MAX_FILE_STEM_BYTES)}.$safeExtension"
     }
 
     fun safeFolderName(value: String): String {
@@ -46,6 +46,20 @@ object DownloadFormatTools {
         .trim()
         .trimEnd('.')
 
+    private fun String.takeUtf8Bytes(maxBytes: Int): String {
+        var index = 0
+        var usedBytes = 0
+        while (index < length) {
+            val codePoint = Character.codePointAt(this, index)
+            val characterCount = Character.charCount(codePoint)
+            val encodedBytes = String(Character.toChars(codePoint)).toByteArray(Charsets.UTF_8).size
+            if (usedBytes + encodedBytes > maxBytes) break
+            usedBytes += encodedBytes
+            index += characterCount
+        }
+        return substring(0, index).trimEnd()
+    }
+
     private const val MAX_FOLDER_LENGTH = 40
-    private const val MAX_FILE_STEM_LENGTH = 180
+    private const val MAX_FILE_STEM_BYTES = 180
 }

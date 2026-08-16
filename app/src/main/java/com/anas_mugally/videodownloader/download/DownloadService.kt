@@ -250,6 +250,10 @@ class DownloadService : Service() {
                 audioOnly = taskSnapshot.kind == DownloadKind.AUDIO,
                 folderName = settings.outputFolder,
             )
+            if (requestedStops.containsKey(taskId)) {
+                contentResolver.delete(saved.uri, null, null)
+                throw MediaProcessingStoppedException()
+            }
             repository.updateTask(taskId) { task ->
                 task.copy(
                     status = DownloadStatus.COMPLETED,

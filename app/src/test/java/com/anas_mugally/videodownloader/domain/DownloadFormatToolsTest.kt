@@ -1,6 +1,7 @@
 package com.anas_mugally.videodownloader.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DownloadFormatToolsTest {
@@ -43,6 +44,16 @@ class DownloadFormatToolsTest {
     fun mimeTypesMatchFinalOutputContainers() {
         assertEquals("audio/mp4", DownloadFormatTools.mimeType("m4a", true))
         assertEquals("video/mp4", DownloadFormatTools.mimeType("mp4", false))
+    }
+
+    @Test
+    fun longUnicodeTitlesStayWithinFilesystemByteLimit() {
+        val name = DownloadFormatTools.outputFileName(
+            task(title = "عنوان طويل جدًا ".repeat(30)),
+            "mp4",
+        )
+
+        assertTrue(name.toByteArray(Charsets.UTF_8).size <= 184)
     }
 
     private fun task(
