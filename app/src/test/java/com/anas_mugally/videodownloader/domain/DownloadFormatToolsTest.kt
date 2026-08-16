@@ -5,31 +5,28 @@ import org.junit.Test
 
 class DownloadFormatToolsTest {
     @Test
-    fun videoOnlyFormatAddsBestAudioFallbacks() {
+    fun selectedVideoIsDownloadedDirectlyWithoutFfmpegMergeSyntax() {
         assertEquals(
-            "137+bestaudio/137/best",
-            DownloadFormatTools.selector(task(formatId = "137", hasAudio = false)),
+            "137/best[ext=mp4]",
+            DownloadFormatTools.primarySelector(task(formatId = "137")),
         )
     }
 
     @Test
-    fun combinedFormatIsNotMergedWithDuplicateAudio() {
+    fun companionAudioPrefersM4a() {
         assertEquals(
-            "22/best",
-            DownloadFormatTools.selector(task(formatId = "22", hasAudio = true)),
+            "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio[acodec^=mp4a]/bestaudio",
+            DownloadFormatTools.companionAudioSelector(),
         )
     }
 
     @Test
-    fun audioSelectionHonorsChosenFormat() {
+    fun outputFileNameHonorsNamingModeAndM4a() {
         assertEquals(
-            "251/bestaudio/best",
-            DownloadFormatTools.selector(
-                task(
-                    formatId = "251",
-                    hasAudio = true,
-                    kind = DownloadKind.AUDIO,
-                ),
+            "A title-media-id.m4a",
+            DownloadFormatTools.outputFileName(
+                task(kind = DownloadKind.AUDIO, title = "A/title"),
+                "m4a",
             ),
         )
     }
@@ -43,27 +40,25 @@ class DownloadFormatToolsTest {
     }
 
     @Test
-    fun mimeTypesUseKnownMediaMappings() {
-        assertEquals("audio/mpeg", DownloadFormatTools.mimeType("mp3", true))
-        assertEquals("video/x-matroska", DownloadFormatTools.mimeType("mkv", false))
-        assertEquals("video/mp4", DownloadFormatTools.mimeType("unknown", false))
+    fun mimeTypesMatchFinalOutputContainers() {
+        assertEquals("audio/mp4", DownloadFormatTools.mimeType("m4a", true))
+        assertEquals("video/mp4", DownloadFormatTools.mimeType("mp4", false))
     }
 
     private fun task(
-        formatId: String,
-        hasAudio: Boolean,
+        formatId: String = "140",
         kind: DownloadKind = DownloadKind.VIDEO,
+        title: String = "A title",
     ) = DownloadTask(
         id = "task",
+        mediaId = "media-id",
         sourceUrl = "https://example.com/media",
-        title = "Media",
+        title = title,
         thumbnailUrl = null,
         formatId = formatId,
         formatLabel = formatId,
-        formatHasAudio = hasAudio,
+        formatHasAudio = false,
         kind = kind,
-        requestedAudioFormat = AudioFormat.MP3,
         fileNameMode = FileNameMode.TITLE_AND_ID,
     )
 }
-

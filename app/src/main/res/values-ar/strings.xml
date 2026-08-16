@@ -9,6 +9,7 @@
     <string name="video_link_hint">الصق رابط وسائط عامًا</string>
     <string name="paste">لصق</string>
     <string name="clear">مسح</string>
+    <string name="close">إغلاق</string>
     <string name="show_qualities">عرض الجودات</string>
     <string name="analyzing_link">جارٍ تحليل الرابط…</string>
     <string name="invalid_url">أدخل رابط http أو https صحيحًا.</string>
@@ -21,7 +22,13 @@
     <string name="format_details">%1$s • %2$s</string>
     <string name="size_unknown">يُحسب الحجم عند بدء التنزيل</string>
     <string name="start_download">بدء التنزيل</string>
+    <string name="m4a_media3_note">يُحوّل الصوت داخل الهاتف إلى M4A ‏(AAC) عبر Google Media3. لا يتضمن التطبيق FFmpeg.</string>
     <string name="legal_download_notice">نزّل فقط الوسائط التي تملكها أو لديك إذن من صاحب الحقوق والمنصة بحفظها. لا يتجاوز التطبيق DRM.</string>
+
+    <string name="share_sheet_title">تنزيل الرابط المشارك</string>
+    <string name="share_sheet_subtitle">يبقى التطبيق السابق ظاهرًا خلف هذه النافذة المختصرة.</string>
+    <string name="video_mp4">فيديو · MP4</string>
+    <string name="audio_m4a">صوت · M4A</string>
 
     <string name="download_queue">طابور التنزيل</string>
     <string name="download_queue_subtitle">أوقف واستأنف وأعد المحاولة وشغّل وشارك الوسائط المحفوظة.</string>
@@ -65,13 +72,12 @@
     <string name="theme_dark">داكنة</string>
     <string name="storage_and_naming">التخزين والتسمية</string>
     <string name="output_folder">المجلد الفرعي للوسائط</string>
-    <string name="output_folder_description">تُحفظ الفيديوهات داخل Movies والصوت داخل Music عبر MediaStore، دون طلب صلاحية إدارة الملفات.</string>
+    <string name="output_folder_description">تُحفظ فيديوهات MP4 داخل Movies وصوت M4A داخل Music عبر MediaStore، دون طلب صلاحية إدارة الملفات.</string>
     <string name="save">حفظ</string>
     <string name="file_name">اسم الملف</string>
     <string name="file_name_title">عنوان الوسائط</string>
     <string name="file_name_title_id">العنوان ومعرّف الوسائط</string>
     <string name="file_name_id">معرّف الوسائط فقط</string>
-    <string name="audio_output_format">تنسيق الصوت الناتج</string>
     <string name="notifications">الإشعارات</string>
     <string name="notifications_enabled">إشعارات التنزيل مفعلة.</string>
     <string name="notifications_disabled">صلاحية الإشعارات غير ممنوحة. سيستمر التنزيل لكن قد لا يظهر التقدم.</string>
@@ -104,4 +110,3 @@
     <string name="download_completed">اكتمل التنزيل</string>
     <string name="download_failed">فشل التنزيل</string>
 </resources>
-

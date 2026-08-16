@@ -1,6 +1,5 @@
 package com.anas_mugally.videodownloader.data
 
-import com.anas_mugally.videodownloader.domain.AudioFormat
 import com.anas_mugally.videodownloader.domain.DownloadKind
 import com.anas_mugally.videodownloader.domain.DownloadStatus
 import com.anas_mugally.videodownloader.domain.DownloadTask
@@ -13,6 +12,7 @@ class TaskJsonCodecTest {
     fun roundTripPreservesDownloadTask() {
         val original = DownloadTask(
             id = "download-1",
+            mediaId = "media-1",
             sourceUrl = "https://example.com/video",
             title = "A title with العربية",
             thumbnailUrl = "https://example.com/thumb.jpg",
@@ -20,7 +20,6 @@ class TaskJsonCodecTest {
             formatLabel = "1080p",
             formatHasAudio = false,
             kind = DownloadKind.VIDEO,
-            requestedAudioFormat = AudioFormat.M4A,
             fileNameMode = FileNameMode.TITLE_AND_ID,
             status = DownloadStatus.COMPLETED,
             progress = 100,
@@ -40,4 +39,3 @@ class TaskJsonCodecTest {
         assertEquals(emptyList<DownloadTask>(), TaskJsonCodec.decode("{not-json"))
     }
 }
-

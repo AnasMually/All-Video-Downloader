@@ -53,7 +53,6 @@ import com.anas_mugally.videodownloader.BuildConfig
 import com.anas_mugally.videodownloader.R
 import com.anas_mugally.videodownloader.data.EngineState
 import com.anas_mugally.videodownloader.domain.AppSettings
-import com.anas_mugally.videodownloader.domain.AudioFormat
 import com.anas_mugally.videodownloader.domain.FileNameMode
 import com.anas_mugally.videodownloader.domain.ThemeMode
 
@@ -69,7 +68,6 @@ fun SettingsScreen(
     onThemeModeChanged: (ThemeMode) -> Unit,
     onOutputFolderSaved: (String) -> Unit,
     onFileNameModeChanged: (FileNameMode) -> Unit,
-    onAudioFormatChanged: (AudioFormat) -> Unit,
     onImportCookies: () -> Unit,
     onClearCookies: () -> Unit,
     onRequestNotifications: () -> Unit,
@@ -181,19 +179,6 @@ fun SettingsScreen(
                         },
                         selected = settings.fileNameMode == mode,
                         onClick = { onFileNameModeChanged(mode) },
-                    )
-                }
-                HorizontalDivider()
-                Text(
-                    text = stringResource(R.string.audio_output_format),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                AudioFormat.entries.forEach { format ->
-                    RadioSettingRow(
-                        title = format.extension.uppercase(),
-                        selected = settings.audioFormat == format,
-                        onClick = { onAudioFormatChanged(format) },
                     )
                 }
             }

@@ -1,6 +1,5 @@
 package com.anas_mugally.videodownloader.data
 
-import com.anas_mugally.videodownloader.domain.AudioFormat
 import com.anas_mugally.videodownloader.domain.DownloadKind
 import com.anas_mugally.videodownloader.domain.DownloadStatus
 import com.anas_mugally.videodownloader.domain.DownloadTask
@@ -15,6 +14,7 @@ object TaskJsonCodec {
             array.put(
                 JSONObject().apply {
                     put("id", task.id)
+                    putNullable("mediaId", task.mediaId)
                     put("sourceUrl", task.sourceUrl)
                     put("title", task.title)
                     putNullable("thumbnailUrl", task.thumbnailUrl)
@@ -22,7 +22,6 @@ object TaskJsonCodec {
                     put("formatLabel", task.formatLabel)
                     put("formatHasAudio", task.formatHasAudio)
                     put("kind", task.kind.name)
-                    put("requestedAudioFormat", task.requestedAudioFormat.name)
                     put("fileNameMode", task.fileNameMode.name)
                     put("status", task.status.name)
                     put("progress", task.progress)
@@ -50,6 +49,7 @@ object TaskJsonCodec {
                     add(
                         DownloadTask(
                             id = id,
+                            mediaId = item.nullableString("mediaId"),
                             sourceUrl = sourceUrl,
                             title = item.optString("title", "Media"),
                             thumbnailUrl = item.nullableString("thumbnailUrl"),
@@ -57,7 +57,6 @@ object TaskJsonCodec {
                             formatLabel = item.optString("formatLabel", "Best"),
                             formatHasAudio = item.optBoolean("formatHasAudio", false),
                             kind = item.enumValue("kind", DownloadKind.VIDEO),
-                            requestedAudioFormat = item.enumValue("requestedAudioFormat", AudioFormat.MP3),
                             fileNameMode = item.enumValue("fileNameMode", FileNameMode.TITLE_AND_ID),
                             status = item.enumValue("status", DownloadStatus.FAILED),
                             progress = item.optInt("progress", 0).coerceIn(0, 100),

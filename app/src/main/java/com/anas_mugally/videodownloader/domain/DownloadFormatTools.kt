@@ -1,42 +1,51 @@
 package com.anas_mugally.videodownloader.domain
 
+import java.util.Locale
+
 object DownloadFormatTools {
-    fun selector(task: DownloadTask): String = when (task.kind) {
-        DownloadKind.AUDIO -> "${task.formatId}/bestaudio/best"
-        DownloadKind.VIDEO -> when {
-            task.formatId == "best" -> "bestvideo+bestaudio/best"
-            task.formatHasAudio -> "${task.formatId}/best"
-            else -> "${task.formatId}+bestaudio/${task.formatId}/best"
-        }
+    fun primarySelector(task: DownloadTask): String = when (task.kind) {
+        DownloadKind.AUDIO -> "${task.formatId}/bestaudio[ext=m4a]/bestaudio"
+        DownloadKind.VIDEO -> "${task.formatId}/best[ext=mp4]"
     }
 
-    fun outputTemplate(mode: FileNameMode): String = when (mode) {
-        FileNameMode.TITLE -> "%(title).180B.%(ext)s"
-        FileNameMode.TITLE_AND_ID -> "%(title).150B-%(id)s.%(ext)s"
-        FileNameMode.MEDIA_ID -> "%(id)s.%(ext)s"
+    fun companionAudioSelector(): String =
+        "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio[acodec^=mp4a]/bestaudio"
+
+    fun outputFileName(task: DownloadTask, extension: String): String {
+        val safeTitle = safeFileStem(task.title).ifBlank { "Media" }
+        val safeMediaId = safeFileStem(task.mediaId.orEmpty()).ifBlank { task.id.take(8) }
+        val stem = when (task.fileNameMode) {
+            FileNameMode.TITLE -> safeTitle
+            FileNameMode.TITLE_AND_ID -> "$safeTitle-$safeMediaId"
+            FileNameMode.MEDIA_ID -> safeMediaId
+        }
+        val safeExtension = extension
+            .lowercase(Locale.ROOT)
+            .filter(Char::isLetterOrDigit)
+            .ifBlank { if (task.kind == DownloadKind.AUDIO) "m4a" else "mp4" }
+        return "${stem.take(MAX_FILE_STEM_LENGTH)}.$safeExtension"
     }
 
     fun safeFolderName(value: String): String {
-        val sanitized = value
-            .replace(Regex("""[\\/:*?\"<>|]"""), " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
-            .take(40)
+        val sanitized = safeFileStem(value).take(MAX_FOLDER_LENGTH)
         return sanitized.ifBlank { AppSettings.DEFAULT_OUTPUT_FOLDER }
     }
 
     fun mimeType(extension: String, audioOnly: Boolean): String {
-        val normalizedExtension = extension.lowercase().ifBlank { if (audioOnly) "mp3" else "mp4" }
-        return when (normalizedExtension) {
-            "mp3" -> "audio/mpeg"
-            "m4a", "aac" -> "audio/mp4"
-            "opus" -> "audio/opus"
-            "ogg", "oga" -> "audio/ogg"
-            "wav" -> "audio/wav"
-            "webm" -> if (audioOnly) "audio/webm" else "video/webm"
-            "mkv" -> "video/x-matroska"
-            "mov" -> "video/quicktime"
-            else -> if (audioOnly) "audio/$normalizedExtension" else "video/mp4"
+        val normalizedExtension = extension.lowercase(Locale.ROOT)
+        return when {
+            audioOnly && normalizedExtension == "mp3" -> "audio/mpeg"
+            audioOnly -> "audio/mp4"
+            else -> "video/mp4"
         }
     }
+
+    private fun safeFileStem(value: String): String = value
+        .replace(Regex("""[\\/:*?\"<>|\p{Cc}]"""), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .trimEnd('.')
+
+    private const val MAX_FOLDER_LENGTH = 40
+    private const val MAX_FILE_STEM_LENGTH = 180
 }

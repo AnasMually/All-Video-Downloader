@@ -59,11 +59,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun Intent.toLaunchData(sequence: Long): AppLaunchData {
-        val sharedText = takeIf { action == Intent.ACTION_SEND }
-            ?.getStringExtra(Intent.EXTRA_TEXT)
-            .orEmpty()
         return AppLaunchData(
-            sharedText = sharedText,
             screen = getStringExtra(EXTRA_SCREEN),
             taskId = getStringExtra(EXTRA_TASK_ID),
             play = getBooleanExtra(EXTRA_PLAY, false),

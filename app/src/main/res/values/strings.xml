@@ -9,6 +9,7 @@
     <string name="video_link_hint">Paste a public media link</string>
     <string name="paste">Paste</string>
     <string name="clear">Clear</string>
+    <string name="close">Close</string>
     <string name="show_qualities">Show qualities</string>
     <string name="analyzing_link">Analyzing link…</string>
     <string name="invalid_url">Enter a valid http or https link.</string>
@@ -21,7 +22,13 @@
     <string name="format_details">%1$s • %2$s</string>
     <string name="size_unknown">Size calculated when download starts</string>
     <string name="start_download">Start download</string>
+    <string name="m4a_media3_note">Audio is converted on-device to M4A (AAC) with Google Media3. FFmpeg is not included.</string>
     <string name="legal_download_notice">Download only media that you own or have permission from the rights holder and platform to save. DRM is not bypassed.</string>
+
+    <string name="share_sheet_title">Download shared link</string>
+    <string name="share_sheet_subtitle">The previous app stays visible behind this compact window.</string>
+    <string name="video_mp4">Video · MP4</string>
+    <string name="audio_m4a">Audio · M4A</string>
 
     <string name="download_queue">Download queue</string>
     <string name="download_queue_subtitle">Pause, resume, retry, play, and share saved media.</string>
@@ -65,13 +72,12 @@
     <string name="theme_dark">Dark</string>
     <string name="storage_and_naming">Storage and naming</string>
     <string name="output_folder">Media subfolder</string>
-    <string name="output_folder_description">Videos are saved under Movies and audio under Music using MediaStore. No file-management permission is requested.</string>
+    <string name="output_folder_description">MP4 videos are saved under Movies and M4A audio under Music using MediaStore. No file-management permission is requested.</string>
     <string name="save">Save</string>
     <string name="file_name">File name</string>
     <string name="file_name_title">Media title</string>
     <string name="file_name_title_id">Title and media ID</string>
     <string name="file_name_id">Media ID only</string>
-    <string name="audio_output_format">Audio output format</string>
     <string name="notifications">Notifications</string>
     <string name="notifications_enabled">Download notifications are enabled.</string>
     <string name="notifications_disabled">Notification permission is not granted. Downloads still run, but progress may be hidden.</string>

@@ -307,6 +307,16 @@ fun HomeScreen(
                 )
             }
 
+            if (state.selectedKind == DownloadKind.AUDIO) {
+                item {
+                    Text(
+                        text = stringResource(R.string.m4a_media3_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             item {
                 Button(
                     onClick = onDownload,
@@ -339,6 +349,7 @@ private fun FormatRow(
     onClick: () -> Unit,
 ) {
     val size = format.fileSize?.let(::formatFileSize) ?: stringResource(R.string.size_unknown)
+    val outputExtension = if (audioOnly) "M4A" else "MP4"
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
@@ -367,7 +378,7 @@ private fun FormatRow(
                 Text(
                     text = stringResource(
                         R.string.format_details,
-                        format.extension.uppercase(Locale.ROOT),
+                        outputExtension,
                         size,
                     ),
                     style = MaterialTheme.typography.bodySmall,

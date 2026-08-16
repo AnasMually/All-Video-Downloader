@@ -2,6 +2,7 @@ package com.anas_mugally.videodownloader.domain
 
 data class DownloadTask(
     val id: String,
+    val mediaId: String?,
     val sourceUrl: String,
     val title: String,
     val thumbnailUrl: String?,
@@ -9,7 +10,6 @@ data class DownloadTask(
     val formatLabel: String,
     val formatHasAudio: Boolean,
     val kind: DownloadKind,
-    val requestedAudioFormat: AudioFormat,
     val fileNameMode: FileNameMode,
     val status: DownloadStatus = DownloadStatus.QUEUED,
     val progress: Int = 0,
@@ -51,18 +51,12 @@ enum class FileNameMode {
     MEDIA_ID,
 }
 
-enum class AudioFormat(val extension: String) {
-    MP3("mp3"),
-    M4A("m4a"),
-}
-
 data class AppSettings(
     val wifiOnly: Boolean = false,
     val dynamicColor: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val outputFolder: String = DEFAULT_OUTPUT_FOLDER,
     val fileNameMode: FileNameMode = FileNameMode.TITLE_AND_ID,
-    val audioFormat: AudioFormat = AudioFormat.MP3,
 ) {
     companion object {
         const val DEFAULT_OUTPUT_FOLDER = "All Video Downloader"

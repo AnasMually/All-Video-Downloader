@@ -41,7 +41,6 @@ import com.anas_mugally.videodownloader.domain.DownloadTask
 import kotlinx.coroutines.flow.collectLatest
 
 data class AppLaunchData(
-    val sharedText: String = "",
     val screen: String? = null,
     val taskId: String? = null,
     val play: Boolean = false,
@@ -97,10 +96,6 @@ fun AllVideoDownloaderApp(
     }
 
     LaunchedEffect(launchData.sequence) {
-        if (launchData.sharedText.isNotBlank()) {
-            viewModel.consumeSharedText(launchData.sharedText)
-            destination = AppDestination.HOME
-        }
         if (launchData.screen == MainActivity.SCREEN_DOWNLOADS) {
             destination = AppDestination.DOWNLOADS
         }
@@ -197,7 +192,6 @@ fun AllVideoDownloaderApp(
                 onThemeModeChanged = viewModel::setThemeMode,
                 onOutputFolderSaved = viewModel::setOutputFolder,
                 onFileNameModeChanged = viewModel::setFileNameMode,
-                onAudioFormatChanged = viewModel::setAudioFormat,
                 onImportCookies = { cookiesDocument.launch(arrayOf("text/plain", "text/*")) },
                 onClearCookies = viewModel::clearCookies,
                 onRequestNotifications = {

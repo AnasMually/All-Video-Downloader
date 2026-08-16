@@ -9,7 +9,6 @@ import com.anas_mugally.videodownloader.R
 import com.anas_mugally.videodownloader.VideoDownloaderApp
 import com.anas_mugally.videodownloader.data.YtDlpExtractor
 import com.anas_mugally.videodownloader.domain.AppSettings
-import com.anas_mugally.videodownloader.domain.AudioFormat
 import com.anas_mugally.videodownloader.domain.DownloadKind
 import com.anas_mugally.videodownloader.domain.DownloadStatus
 import com.anas_mugally.videodownloader.domain.DownloadTask
@@ -83,8 +82,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun consumeSharedText(value: String) {
-        val url = UrlTools.extractHttpUrl(value) ?: return
-        setUrl(url)
+        setUrl(UrlTools.extractHttpUrl(value) ?: value.trim())
     }
 
     fun analyze() {
@@ -144,7 +142,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             DownloadKind.VIDEO -> current.selectedVideoFormatId
             DownloadKind.AUDIO -> current.selectedAudioFormatId
         } ?: return
-        val format = media.formats.firstOrNull { it.formatId == selectedId } ?: return
+        val format = when (current.selectedKind) {
+            DownloadKind.VIDEO -> media.formats.firstOrNull {
+                it.formatId == selectedId && it.hasVideo
+            }
+            DownloadKind.AUDIO -> media.formats.firstOrNull {
+                it.formatId == selectedId && it.hasAudio && !it.hasVideo
+            }
+        } ?: return
         viewModelScope.launch {
             val task = enqueueMutex.withLock {
                 val duplicate = repository.tasks.first().any { existing ->
@@ -158,6 +163,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val currentSettings = repository.settings.first()
                 DownloadTask(
                     id = UUID.randomUUID().toString(),
+                    mediaId = media.id,
                     sourceUrl = media.sourceUrl,
                     title = media.title,
                     thumbnailUrl = media.thumbnailUrl,
@@ -165,7 +171,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     formatLabel = format.label,
                     formatHasAudio = format.hasAudio,
                     kind = current.selectedKind,
-                    requestedAudioFormat = currentSettings.audioFormat,
                     fileNameMode = currentSettings.fileNameMode,
                 ).also { repository.upsertTask(it) }
             }
@@ -225,8 +230,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setOutputFolder(folder: String) = updateSettings { it.copy(outputFolder = folder) }
 
     fun setFileNameMode(mode: FileNameMode) = updateSettings { it.copy(fileNameMode = mode) }
-
-    fun setAudioFormat(format: AudioFormat) = updateSettings { it.copy(audioFormat = format) }
 
     fun importCookies(uri: Uri) {
         viewModelScope.launch {

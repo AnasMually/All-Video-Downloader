@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.anas_mugally.videodownloader.domain.AppSettings
-import com.anas_mugally.videodownloader.domain.AudioFormat
 import com.anas_mugally.videodownloader.domain.DownloadFormatTools
 import com.anas_mugally.videodownloader.domain.DownloadStatus
 import com.anas_mugally.videodownloader.domain.DownloadTask
@@ -49,7 +48,6 @@ class AppRepository(context: Context) {
             preferences[Keys.themeMode] = next.themeMode.name
             preferences[Keys.outputFolder] = next.outputFolder
             preferences[Keys.fileNameMode] = next.fileNameMode.name
-            preferences[Keys.audioFormat] = next.audioFormat.name
         }
     }
 
@@ -119,7 +117,6 @@ class AppRepository(context: Context) {
                 preferences[Keys.outputFolder] ?: AppSettings.DEFAULT_OUTPUT_FOLDER,
             ),
             fileNameMode = preferences.enumValue(Keys.fileNameMode, FileNameMode.TITLE_AND_ID),
-            audioFormat = preferences.enumValue(Keys.audioFormat, AudioFormat.MP3),
         )
     }
 
@@ -138,7 +135,6 @@ class AppRepository(context: Context) {
         val themeMode = stringPreferencesKey("theme_mode")
         val outputFolder = stringPreferencesKey("output_folder")
         val fileNameMode = stringPreferencesKey("file_name_mode")
-        val audioFormat = stringPreferencesKey("audio_format")
         val tasks = stringPreferencesKey("download_tasks_v1")
     }
 
