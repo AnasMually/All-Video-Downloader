@@ -31,9 +31,11 @@
 
         <activity
             android:name=".ShareReceiverActivity"
+            android:documentLaunchMode="always"
             android:excludeFromRecents="true"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="standard"
+            android:taskAffinity=""
             android:theme="@style/Theme.AllVideoDownloader.ShareDialog"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

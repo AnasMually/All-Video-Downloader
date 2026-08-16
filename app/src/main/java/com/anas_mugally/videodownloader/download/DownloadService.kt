@@ -16,6 +16,8 @@ import com.anas_mugally.videodownloader.data.YtDlpRuntime
 import com.anas_mugally.videodownloader.domain.AppSettings
 import com.anas_mugally.videodownloader.domain.DownloadFormatTools
 import com.anas_mugally.videodownloader.domain.DownloadKind
+import com.anas_mugally.videodownloader.domain.DownloadProgressParser
+import com.anas_mugally.videodownloader.domain.DownloadProgressSample
 import com.anas_mugally.videodownloader.domain.DownloadStatus
 import com.anas_mugally.videodownloader.domain.DownloadTask
 import com.yausername.youtubedl_android.YoutubeDL
@@ -234,7 +236,15 @@ class DownloadService : Service() {
         currentTaskId = taskId
         requestedStops.remove(taskId)
         repository.updateTask(taskId) { task ->
-            task.copy(status = DownloadStatus.DOWNLOADING, error = null)
+            task.copy(
+                status = DownloadStatus.DOWNLOADING,
+                progress = 0,
+                downloadedBytes = null,
+                totalBytes = null,
+                speedBytesPerSecond = null,
+                etaSeconds = null,
+                error = null,
+            )
         }
         repository.task(taskId)?.let(::showActiveNotification)
 
@@ -395,6 +405,9 @@ class DownloadService : Service() {
             addOption("-o", File(directory, "$outputStem.%(ext)s").absolutePath)
             addOption("--no-playlist")
             addOption("--newline")
+            addOption("--no-colors")
+            addOption("--progress-delta", "0.5")
+            addOption("--progress-template", DownloadProgressParser.YT_DLP_TEMPLATE)
             addOption("--continue")
             addOption("--fixup", "never")
             addOption("--retries", 10)
@@ -405,27 +418,42 @@ class DownloadService : Service() {
         }
         val lastUpdateAt = AtomicLong(0L)
         val lastProgress = AtomicInteger(-1)
-        val response = YoutubeDL.getInstance().execute(request, task.id) { progress, _, _ ->
+        val lastDownloadedBytes = AtomicLong(-1L)
+        val response = YoutubeDL.getInstance().execute(request, task.id) { progress, _, line ->
+            val sample = DownloadProgressParser.parse(line, progress) ?: return@execute
             val scaled = progressStart +
-                ((progressEnd - progressStart) * progress.coerceIn(0f, 100f) / 100f).roundToInt()
+                ((progressEnd - progressStart) * sample.percent / 100f).roundToInt()
             val percent = scaled.coerceIn(progressStart, progressEnd)
             val now = System.currentTimeMillis()
             val shouldUpdate = percent == progressEnd ||
-                (percent != lastProgress.get() && now - lastUpdateAt.get() >= PROGRESS_UPDATE_INTERVAL_MS)
+                (now - lastUpdateAt.get() >= PROGRESS_UPDATE_INTERVAL_MS &&
+                    (percent != lastProgress.get() ||
+                        sample.downloadedBytes != lastDownloadedBytes.get()))
             if (shouldUpdate) {
                 lastProgress.set(percent)
+                lastDownloadedBytes.set(sample.downloadedBytes ?: -1L)
                 lastUpdateAt.set(now)
-                serviceScope.launch { updateProgress(task.id, percent) }
+                serviceScope.launch { updateProgress(task.id, percent, sample) }
             }
         }
         throwIfStopRequested(task.id)
         return findOutputFile(response.out, directory, outputStem)
     }
 
-    private suspend fun updateProgress(taskId: String, percent: Int) {
+    private suspend fun updateProgress(
+        taskId: String,
+        percent: Int,
+        sample: DownloadProgressSample? = null,
+    ) {
         repository.updateTask(taskId) { task ->
             if (task.status == DownloadStatus.DOWNLOADING) {
-                task.copy(progress = maxOf(task.progress, percent.coerceIn(0, 99)))
+                task.copy(
+                    progress = maxOf(task.progress, percent.coerceIn(0, 99)),
+                    downloadedBytes = sample?.downloadedBytes ?: task.downloadedBytes,
+                    totalBytes = sample?.totalBytes ?: task.totalBytes,
+                    speedBytesPerSecond = sample?.speedBytesPerSecond ?: task.speedBytesPerSecond,
+                    etaSeconds = sample?.etaSeconds ?: task.etaSeconds,
+                )
             } else {
                 task
             }

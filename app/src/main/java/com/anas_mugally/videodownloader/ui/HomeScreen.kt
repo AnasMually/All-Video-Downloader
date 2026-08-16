@@ -28,7 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -302,9 +301,9 @@ fun HomeScreen(
                 state.selectedVideoFormatId
             }
             items(shownFormats, key = MediaFormat::formatId) { format ->
-                FormatRow(
+                FormatChoiceCard(
                     format = format,
-                    audioOnly = state.selectedKind == DownloadKind.AUDIO,
+                    kind = state.selectedKind,
                     selected = selectedId == format.formatId,
                     onClick = { onFormatSelected(format.formatId) },
                 )
@@ -344,61 +343,6 @@ fun HomeScreen(
     }
 }
 
-@Composable
-private fun FormatRow(
-    format: MediaFormat,
-    audioOnly: Boolean,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val size = format.fileSize?.let(::formatFileSize) ?: stringResource(R.string.size_unknown)
-    val outputExtension = if (audioOnly) "M4A" else "MP4"
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(selected = selected, onClick = onClick)
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = if (audioOnly) {
-                        stringResource(R.string.audio_quality_value, format.label)
-                    } else {
-                        format.label
-                    },
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = stringResource(
-                        R.string.format_details,
-                        outputExtension,
-                        size,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (selected) {
-                Icon(
-                    painterResource(R.drawable.ic_download_done),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-    }
-}
-
 private fun formatDuration(seconds: Long): String {
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
@@ -407,15 +351,5 @@ private fun formatDuration(seconds: Long): String {
         String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, remainingSeconds)
     } else {
         String.format(Locale.getDefault(), "%d:%02d", minutes, remainingSeconds)
-    }
-}
-
-private fun formatFileSize(bytes: Long): String {
-    return if (bytes >= 1_073_741_824L) {
-        String.format(Locale.getDefault(), "%.1f GB", bytes / 1_073_741_824.0)
-    } else if (bytes >= 1_048_576L) {
-        String.format(Locale.getDefault(), "%.1f MB", bytes / 1_048_576.0)
-    } else {
-        String.format(Locale.getDefault(), "%.0f KB", bytes / 1024.0)
     }
 }

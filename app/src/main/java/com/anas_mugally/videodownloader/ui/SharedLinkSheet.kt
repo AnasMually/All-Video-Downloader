@@ -23,15 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -70,7 +66,6 @@ fun SharedLinkSheet(
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var formatMenuExpanded by remember { mutableStateOf(false) }
     var enqueueAfterPermission by remember { mutableStateOf(false) }
 
     val notificationPermission = rememberLauncherForActivityResult(
@@ -252,36 +247,19 @@ fun SharedLinkSheet(
                     state.selectedAudioFormatId
                 }
                 val selected = formats.firstOrNull { it.formatId == selectedId }
-                ExposedDropdownMenuBox(
-                    expanded = formatMenuExpanded,
-                    onExpandedChange = { formatMenuExpanded = !formatMenuExpanded },
-                ) {
-                    OutlinedTextField(
-                        value = selected?.displayName(state.selectedKind).orEmpty(),
-                        onValueChange = {},
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.choose_quality)) },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = formatMenuExpanded)
-                        },
-                        shape = RoundedCornerShape(18.dp),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = formatMenuExpanded,
-                        onDismissRequest = { formatMenuExpanded = false },
-                    ) {
-                        formats.forEach { format ->
-                            DropdownMenuItem(
-                                text = { Text(format.displayName(state.selectedKind)) },
-                                onClick = {
-                                    viewModel.selectFormat(format.formatId)
-                                    formatMenuExpanded = false
-                                },
-                            )
-                        }
+                Text(
+                    text = stringResource(R.string.choose_quality),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    formats.forEach { format ->
+                        FormatChoiceCard(
+                            format = format,
+                            kind = state.selectedKind,
+                            selected = format.formatId == selectedId,
+                            onClick = { viewModel.selectFormat(format.formatId) },
+                        )
                     }
                 }
 
@@ -307,14 +285,5 @@ fun SharedLinkSheet(
                 }
             }
         }
-    }
-}
-
-private fun MediaFormat.displayName(kind: DownloadKind): String = when (kind) {
-    DownloadKind.VIDEO -> "$label · MP4"
-    DownloadKind.AUDIO -> if (audioBitrateKbps != null) {
-        "M4A · $audioBitrateKbps kbps"
-    } else {
-        "M4A"
     }
 }

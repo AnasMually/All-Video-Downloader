@@ -53,7 +53,10 @@ object DownloadNotifications {
         val text = if (waiting) {
             context.getString(R.string.waiting_for_wifi)
         } else {
-            context.getString(R.string.download_progress_percent, task.progress)
+            listOfNotNull(
+                DownloadProgressText.primary(context, task),
+                DownloadProgressText.secondary(context, task),
+            ).joinToString(" • ")
         }
         return NotificationCompat.Builder(context, DOWNLOAD_CHANNEL)
             .setSmallIcon(R.drawable.ic_download)

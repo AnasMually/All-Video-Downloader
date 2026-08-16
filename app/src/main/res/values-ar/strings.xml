@@ -21,6 +21,12 @@
     <string name="audio_quality_value">صوت • %1$s</string>
     <string name="format_details">%1$s • %2$s</string>
     <string name="size_unknown">يُحسب الحجم عند بدء التنزيل</string>
+    <string name="size_unknown_short">الحجم غير متوفر</string>
+    <string name="estimated_size_value">≈ %1$s</string>
+    <string name="frames_per_second">%1$d إطار/ث</string>
+    <string name="video_dimensions">%1$d×%2$d</string>
+    <string name="audio_included">الصوت مضمّن في هذا الملف</string>
+    <string name="audio_downloaded_and_merged">سيُنزل صوت متوافق ويُدمج داخل الهاتف</string>
     <string name="start_download">بدء التنزيل</string>
     <string name="m4a_media3_note">يُحوّل الصوت داخل الهاتف إلى M4A ‏(AAC) عبر Google Media3. لا يتضمن التطبيق FFmpeg.</string>
     <string name="legal_download_notice">نزّل فقط الوسائط التي تملكها أو لديك إذن من صاحب الحقوق والمنصة بحفظها. لا يتجاوز التطبيق DRM.</string>
@@ -37,6 +43,10 @@
     <string name="no_downloads_description">حلّل رابطًا من الشاشة الرئيسية، واختر الجودة، ثم ابدأ التنزيل.</string>
     <string name="task_format">%1$s • %2$s</string>
     <string name="download_progress_percent">تم تنزيل %1$d%%</string>
+    <string name="download_progress_amount">%1$d%% • %2$s / %3$s</string>
+    <string name="download_speed_eta">%1$s/ث • متبقٍ %2$s</string>
+    <string name="download_speed">%1$s/ث</string>
+    <string name="download_eta">متبقٍ %1$s</string>
     <string name="waiting_for_wifi">بانتظار Wi‑Fi</string>
     <string name="pause">إيقاف مؤقت</string>
     <string name="resume">استئناف</string>

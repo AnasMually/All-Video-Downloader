@@ -25,6 +25,10 @@ object TaskJsonCodec {
                     put("fileNameMode", task.fileNameMode.name)
                     put("status", task.status.name)
                     put("progress", task.progress)
+                    putNullable("downloadedBytes", task.downloadedBytes)
+                    putNullable("totalBytes", task.totalBytes)
+                    putNullable("speedBytesPerSecond", task.speedBytesPerSecond)
+                    putNullable("etaSeconds", task.etaSeconds)
                     put("createdAt", task.createdAt)
                     put("updatedAt", task.updatedAt)
                     putNullable("outputUri", task.outputUri)
@@ -60,6 +64,10 @@ object TaskJsonCodec {
                             fileNameMode = item.enumValue("fileNameMode", FileNameMode.TITLE_AND_ID),
                             status = item.enumValue("status", DownloadStatus.FAILED),
                             progress = item.optInt("progress", 0).coerceIn(0, 100),
+                            downloadedBytes = item.nullableLong("downloadedBytes"),
+                            totalBytes = item.nullableLong("totalBytes"),
+                            speedBytesPerSecond = item.nullableLong("speedBytesPerSecond"),
+                            etaSeconds = item.nullableLong("etaSeconds"),
                             createdAt = item.optLong("createdAt", System.currentTimeMillis()),
                             updatedAt = item.optLong("updatedAt", System.currentTimeMillis()),
                             outputUri = item.nullableString("outputUri"),
@@ -77,9 +85,18 @@ object TaskJsonCodec {
         if (value == null) put(key, JSONObject.NULL) else put(key, value)
     }
 
+    private fun JSONObject.putNullable(key: String, value: Long?) {
+        if (value == null) put(key, JSONObject.NULL) else put(key, value)
+    }
+
     private fun JSONObject.nullableString(key: String): String? {
         if (isNull(key)) return null
         return optString(key).takeIf(String::isNotBlank)
+    }
+
+    private fun JSONObject.nullableLong(key: String): Long? {
+        if (isNull(key) || !has(key)) return null
+        return optLong(key).takeIf { it >= 0L }
     }
 
     private inline fun <reified T : Enum<T>> JSONObject.enumValue(key: String, fallback: T): T {

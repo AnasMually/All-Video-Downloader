@@ -21,6 +21,12 @@
     <string name="audio_quality_value">Audio • %1$s</string>
     <string name="format_details">%1$s • %2$s</string>
     <string name="size_unknown">Size calculated when download starts</string>
+    <string name="size_unknown_short">Size unavailable</string>
+    <string name="estimated_size_value">≈ %1$s</string>
+    <string name="frames_per_second">%1$d FPS</string>
+    <string name="video_dimensions">%1$d×%2$d</string>
+    <string name="audio_included">Audio included in this file</string>
+    <string name="audio_downloaded_and_merged">Compatible audio will be downloaded and merged on-device</string>
     <string name="start_download">Start download</string>
     <string name="m4a_media3_note">Audio is converted on-device to M4A (AAC) with Google Media3. FFmpeg is not included.</string>
     <string name="legal_download_notice">Download only media that you own or have permission from the rights holder and platform to save. DRM is not bypassed.</string>
@@ -37,6 +43,10 @@
     <string name="no_downloads_description">Analyze a link on the Home screen, choose a quality, and start downloading.</string>
     <string name="task_format">%1$s • %2$s</string>
     <string name="download_progress_percent">%1$d%% downloaded</string>
+    <string name="download_progress_amount">%1$d%% • %2$s / %3$s</string>
+    <string name="download_speed_eta">%1$s/s • %2$s remaining</string>
+    <string name="download_speed">%1$s/s</string>
+    <string name="download_eta">%1$s remaining</string>
     <string name="waiting_for_wifi">Waiting for Wi-Fi</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>

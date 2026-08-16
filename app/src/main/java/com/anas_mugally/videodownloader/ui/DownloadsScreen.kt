@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +43,7 @@ import com.anas_mugally.videodownloader.R
 import com.anas_mugally.videodownloader.domain.DownloadKind
 import com.anas_mugally.videodownloader.domain.DownloadStatus
 import com.anas_mugally.videodownloader.domain.DownloadTask
+import com.anas_mugally.videodownloader.download.DownloadProgressText
 import java.text.DateFormat
 import java.util.Date
 
@@ -226,14 +228,22 @@ private fun DownloadTaskCard(
 
             when (task.status) {
                 DownloadStatus.DOWNLOADING -> {
+                    val context = LocalContext.current
                     LinearProgressIndicator(
                         progress = task.progress / 100f,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
-                        text = stringResource(R.string.download_progress_percent, task.progress),
+                        text = DownloadProgressText.primary(context, task),
                         style = MaterialTheme.typography.labelMedium,
                     )
+                    DownloadProgressText.secondary(context, task)?.let { details ->
+                        Text(
+                            text = details,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 DownloadStatus.QUEUED, DownloadStatus.WAITING_FOR_WIFI -> {

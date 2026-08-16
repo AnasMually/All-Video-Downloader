@@ -33,7 +33,7 @@ class ShareReceiverActivity : ComponentActivity() {
                 SharedLinkSheet(
                     sharedText = sharedText,
                     viewModel = mainViewModel,
-                    onDismiss = ::finish,
+                    onDismiss = ::closeShareTask,
                 )
             }
         }
@@ -48,10 +48,8 @@ class ShareReceiverActivity : ComponentActivity() {
         window.setGravity(Gravity.BOTTOM)
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        sharedText = intent.sharedText()
+    private fun closeShareTask() {
+        if (isTaskRoot) finishAndRemoveTask() else finish()
     }
 
     private fun Intent.sharedText(): String = takeIf { action == Intent.ACTION_SEND }
