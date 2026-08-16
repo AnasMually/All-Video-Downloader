@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -275,8 +274,7 @@ private fun DownloadTaskCard(
                 when (task.status) {
                     DownloadStatus.DOWNLOADING,
                     DownloadStatus.QUEUED,
-                    DownloadStatus.WAITING_FOR_WIFI,
-                    -> {
+                    DownloadStatus.WAITING_FOR_WIFI -> {
                         FilledTonalButton(onClick = onPause) {
                             Icon(Icons.Default.Pause, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
@@ -321,8 +319,7 @@ private fun DownloadTaskCard(
                     }
 
                     DownloadStatus.FAILED,
-                    DownloadStatus.CANCELLED,
-                    -> {
+                    DownloadStatus.CANCELLED -> {
                         Button(onClick = onRetry) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(Modifier.width(6.dp))

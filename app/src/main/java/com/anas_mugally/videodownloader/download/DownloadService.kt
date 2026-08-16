@@ -131,12 +131,25 @@ class DownloadService : Service() {
     @Synchronized
     private fun ensureQueueProcessing() {
         if (queueJob?.isActive == true) return
-        queueJob = serviceScope.launch {
+        val newJob = serviceScope.launch {
             if (!recoveredInterruptedTasks) {
                 repository.recoverInterruptedTasks()
                 recoveredInterruptedTasks = true
             }
             processQueue()
+        }
+        queueJob = newJob
+        newJob.invokeOnCompletion {
+            if (serviceScope.isActive) {
+                serviceScope.launch {
+                    val hasRunnableTask = repository.tasks.first().any { task ->
+                        task.status == DownloadStatus.QUEUED ||
+                            task.status == DownloadStatus.WAITING_FOR_WIFI ||
+                            task.status == DownloadStatus.DOWNLOADING
+                    }
+                    if (hasRunnableTask) ensureQueueProcessing()
+                }
+            }
         }
     }
 

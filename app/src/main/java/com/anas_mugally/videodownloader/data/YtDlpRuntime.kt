@@ -53,8 +53,9 @@ class YtDlpRuntime(context: Context) {
 
     suspend fun importCookies(uri: Uri) = withContext(Dispatchers.IO) {
         val destination = cookiesFile()
-        destination.parentFile?.mkdirs()
-        val temporary = File(destination.parentFile, "cookies.txt.tmp")
+        val directory = destination.parentFile ?: error("Cookies directory is unavailable")
+        directory.mkdirs()
+        val temporary = File(directory, "cookies.txt.tmp")
         try {
             val input = appContext.contentResolver.openInputStream(uri)
                 ?: error("Unable to open cookies file")

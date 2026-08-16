@@ -26,7 +26,8 @@ object DownloadFormatTools {
     }
 
     fun mimeType(extension: String, audioOnly: Boolean): String {
-        return when (extension.lowercase()) {
+        val normalizedExtension = extension.lowercase().ifBlank { if (audioOnly) "mp3" else "mp4" }
+        return when (normalizedExtension) {
             "mp3" -> "audio/mpeg"
             "m4a", "aac" -> "audio/mp4"
             "opus" -> "audio/opus"
@@ -35,7 +36,7 @@ object DownloadFormatTools {
             "webm" -> if (audioOnly) "audio/webm" else "video/webm"
             "mkv" -> "video/x-matroska"
             "mov" -> "video/quicktime"
-            else -> if (audioOnly) "audio/$extension" else "video/mp4"
+            else -> if (audioOnly) "audio/$normalizedExtension" else "video/mp4"
         }
     }
 }

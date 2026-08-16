@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -41,7 +40,7 @@ fun PlayerDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val uri = remember(task.outputUri) { Uri.parse(task.outputUri) }
+    val uri = remember(task.outputUri) { Uri.parse(requireNotNull(task.outputUri)) }
     val player = remember(uri) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(uri))
