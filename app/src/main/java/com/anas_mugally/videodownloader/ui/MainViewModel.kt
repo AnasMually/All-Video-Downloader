@@ -27,8 +27,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class MainUiState(
     val url: String = "",
@@ -51,6 +54,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _state = MutableStateFlow(MainUiState(cookiesImported = runtime.hasCookies()))
     private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 8)
     private var analysisJob: Job? = null
+    private val enqueueMutex = Mutex()
 
     val state = _state.asStateFlow()
     val events = _events.asSharedFlow()
@@ -142,32 +146,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } ?: return
         val format = media.formats.firstOrNull { it.formatId == selectedId } ?: return
         viewModelScope.launch {
-            val duplicate = tasks.value.any { task ->
-                task.isActive &&
-                    task.sourceUrl == media.sourceUrl &&
-                    task.formatId == selectedId &&
-                    task.kind == current.selectedKind
+            val task = enqueueMutex.withLock {
+                val duplicate = repository.tasks.first().any { existing ->
+                    (existing.isActive || existing.status == DownloadStatus.PAUSED) &&
+                        existing.sourceUrl == media.sourceUrl &&
+                        existing.formatId == selectedId &&
+                        existing.kind == current.selectedKind
+                }
+                if (duplicate) return@withLock null
+
+                val currentSettings = repository.settings.first()
+                DownloadTask(
+                    id = UUID.randomUUID().toString(),
+                    sourceUrl = media.sourceUrl,
+                    title = media.title,
+                    thumbnailUrl = media.thumbnailUrl,
+                    formatId = format.formatId,
+                    formatLabel = format.label,
+                    formatHasAudio = format.hasAudio,
+                    kind = current.selectedKind,
+                    requestedAudioFormat = currentSettings.audioFormat,
+                    fileNameMode = currentSettings.fileNameMode,
+                ).also { repository.upsertTask(it) }
             }
-            if (duplicate) {
+            if (task == null) {
                 _events.emit(UiEvent(R.string.download_already_queued))
                 return@launch
             }
-            val currentSettings = settings.value
-            val task = DownloadTask(
-                id = UUID.randomUUID().toString(),
-                sourceUrl = media.sourceUrl,
-                title = media.title,
-                thumbnailUrl = media.thumbnailUrl,
-                formatId = format.formatId,
-                formatLabel = format.label,
-                formatHasAudio = format.hasAudio,
-                kind = current.selectedKind,
-                requestedAudioFormat = currentSettings.audioFormat,
-                fileNameMode = currentSettings.fileNameMode,
-            )
-            repository.upsertTask(task)
-            DownloadController.enqueue(app, task.id)
-            _events.emit(UiEvent(R.string.download_added_to_queue))
+            try {
+                DownloadController.enqueue(app, task.id)
+                _events.emit(UiEvent(R.string.download_added_to_queue))
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                repository.updateTask(task.id) { saved ->
+                    saved.copy(
+                        status = DownloadStatus.FAILED,
+                        error = error.message?.take(240),
+                    )
+                }
+                _events.emit(UiEvent(R.string.download_failed))
+            }
         }
     }
 

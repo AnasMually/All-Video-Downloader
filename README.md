@@ -64,6 +64,7 @@ app/build/outputs/apk/debug/app-debug.apk
 |---|---|
 | `INTERNET` | تحليل الرابط وتنزيل الوسائط |
 | `ACCESS_NETWORK_STATE` | الانتظار عند انقطاع الشبكة وتطبيق Wi-Fi فقط |
+| `WAKE_LOCK` | منع نوم المعالج أثناء عملية تنزيل نشطة فقط؛ صلاحية عادية بلا نافذة موافقة |
 | `POST_NOTIFICATIONS` | عرض تقدم التنزيل على Android 13+؛ تُطلب عند بدء أول تنزيل فقط |
 | `FOREGROUND_SERVICE` | إبقاء التنزيل الذي بدأه المستخدم نشطًا |
 | `FOREGROUND_SERVICE_DATA_SYNC` | نوع الخدمة الأمامية المطلوب على Android الحديث |
@@ -84,10 +85,10 @@ app/build/outputs/apk/debug/app-debug.apk
 يشغّل GitHub Actions تلقائيًا:
 
 ```bash
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
 ```
 
-تغطي اختبارات الوحدة اختيار صيغة yt-dlp، تنظيف أسماء المجلدات، MIME types، استخراج الروابط، وحفظ/استعادة سجل التنزيلات.
+ثم يفحص سير العمل محاذاة مكتبات ELF ذات 64 بت لصفحات 16KB. تغطي اختبارات الوحدة اختيار صيغة yt-dlp، تنظيف أسماء المجلدات، MIME types، استخراج الروابط، وحفظ/استعادة سجل التنزيلات.
 
 ## قيود معروفة
 

@@ -20,11 +20,14 @@ while IFS= read -r -d '' library; do
       exit 1
     fi
   done < <(readelf -lW "$library" | awk '$1 == "LOAD" { print $NF }')
-done < <(find "$work_dir/lib" -type f -name '*.so' -print0)
+done < <(
+  find "$work_dir/lib" -type f -name '*.so' \
+    \( -path '*/arm64-v8a/*' -o -path '*/x86_64/*' \) -print0
+)
 
 if (( checked == 0 )); then
-  echo "No native libraries were found in $apk_path" >&2
+  echo "No 64-bit native libraries were found in $apk_path" >&2
   exit 1
 fi
 
-echo "Verified 16 KB ELF alignment for $checked native libraries."
+echo "Verified 16 KB ELF alignment for $checked 64-bit native libraries."

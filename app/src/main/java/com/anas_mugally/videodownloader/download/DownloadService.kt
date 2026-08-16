@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.annotation.RequiresApi
 import com.anas_mugally.videodownloader.VideoDownloaderApp
 import com.anas_mugally.videodownloader.data.AppRepository
@@ -42,6 +43,7 @@ class DownloadService : Service() {
     private lateinit var runtime: YtDlpRuntime
     private lateinit var notificationManager: NotificationManager
     private lateinit var connectivityManager: ConnectivityManager
+    private lateinit var downloadWakeLock: PowerManager.WakeLock
     private var queueJob: Job? = null
     private var currentTaskId: String? = null
     private var foregroundStarted = false
@@ -54,6 +56,10 @@ class DownloadService : Service() {
         runtime = app.ytDlpRuntime
         notificationManager = getSystemService(NotificationManager::class.java)
         connectivityManager = getSystemService(ConnectivityManager::class.java)
+        downloadWakeLock = getSystemService(PowerManager::class.java).newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "$packageName:active-download",
+        ).apply { setReferenceCounted(false) }
         DownloadNotifications.createChannels(this)
     }
 
@@ -74,6 +80,7 @@ class DownloadService : Service() {
 
     override fun onDestroy() {
         currentTaskId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
+        if (downloadWakeLock.isHeld) downloadWakeLock.release()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -248,6 +255,7 @@ class DownloadService : Service() {
 
         val lastUpdateAt = AtomicLong(0L)
         val lastProgress = AtomicInteger(-1)
+        if (!downloadWakeLock.isHeld) downloadWakeLock.acquire(DOWNLOAD_WAKE_LOCK_TIMEOUT_MS)
         try {
             runtime.ensureReady()
             val response = YoutubeDL.getInstance().execute(request, taskId) { progress, _, _ ->
@@ -324,6 +332,7 @@ class DownloadService : Service() {
                 }
             }
         } finally {
+            if (downloadWakeLock.isHeld) downloadWakeLock.release()
             currentTaskId = null
         }
     }
@@ -396,6 +405,7 @@ class DownloadService : Service() {
         private const val OUTPUT_MARKER = "__AVD_FILE__"
         private const val PROGRESS_UPDATE_INTERVAL_MS = 750L
         private const val NETWORK_POLL_INTERVAL_MS = 3_000L
+        private const val DOWNLOAD_WAKE_LOCK_TIMEOUT_MS = 6L * 60L * 60L * 1_000L
         private const val MAX_ERROR_LENGTH = 500
     }
 }
