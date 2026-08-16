@@ -169,11 +169,15 @@ class OnDeviceMediaProcessor(context: Context) {
                     if (useVideo) videoDone = true else audioDone = true
                     continue
                 }
+                val extractorFlags = extractor.sampleFlags
+                require(extractorFlags and MediaExtractor.SAMPLE_FLAG_ENCRYPTED == 0) {
+                    "Encrypted media samples are not supported"
+                }
                 info.set(
                     0,
                     sampleSize,
                     extractor.sampleTime.coerceAtLeast(0L),
-                    extractor.sampleFlags,
+                    extractorFlags.toMediaCodecFlags(),
                 )
                 mediaMuxer.writeSampleData(outputTrack, buffer, info)
                 extractor.advance()
@@ -203,6 +207,17 @@ class OnDeviceMediaProcessor(context: Context) {
 
     private fun MediaFormat.integerOrNull(key: String): Int? =
         if (containsKey(key)) runCatching { getInteger(key) }.getOrNull() else null
+
+    private fun Int.toMediaCodecFlags(): Int {
+        var codecFlags = 0
+        if (this and MediaExtractor.SAMPLE_FLAG_SYNC != 0) {
+            codecFlags = codecFlags or MediaCodec.BUFFER_FLAG_KEY_FRAME
+        }
+        if (this and MediaExtractor.SAMPLE_FLAG_PARTIAL_FRAME != 0) {
+            codecFlags = codecFlags or MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
+        }
+        return codecFlags
+    }
 
     private companion object {
         const val DEFAULT_MUX_BUFFER_SIZE = 8 * 1024 * 1024
