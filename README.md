@@ -61,6 +61,7 @@ app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
 استخدم `arm64-v8a` للهواتف الحديثة (ومنها الجهاز الظاهر في سجل المشكلة)، واستخدم `armeabi-v7a` فقط لهاتف 32 بت قديم. يرفع GitHub Actions الملفين كقطعتين منفصلتين كي لا تضطر لتنزيل APK عالمي يتجاوز حجمه الحاجة الفعلية.
 
 يحتاج أول Gradle Sync إلى مساحة كافية لتنزيل Android Gradle Plugin وAndroidX ومحرك yt-dlp. لم يعد FFmpeg أو aria2 جزءًا من الاعتماديات.
+تستخدم الواجهة أيقونات Vector صغيرة داخل المشروع بدل مكتبة `material-icons-extended` الضخمة، ويمنع فحص CI رجوع APK لكل معمارية إلى حجم يتجاوز 75 MiB.
 
 ## الصلاحيات
 

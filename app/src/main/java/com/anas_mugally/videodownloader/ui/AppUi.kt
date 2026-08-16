@@ -9,11 +9,8 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,8 +28,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anas_mugally.videodownloader.MainActivity
@@ -49,11 +46,11 @@ data class AppLaunchData(
 
 private enum class AppDestination(
     @StringRes val label: Int,
-    val icon: ImageVector,
+    @DrawableRes val icon: Int,
 ) {
-    HOME(R.string.home, Icons.Default.Home),
-    DOWNLOADS(R.string.downloads, Icons.Default.Download),
-    SETTINGS(R.string.settings, Icons.Default.Settings),
+    HOME(R.string.home, R.drawable.ic_home),
+    DOWNLOADS(R.string.downloads, R.drawable.ic_download),
+    SETTINGS(R.string.settings, R.drawable.ic_settings),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,7 +133,10 @@ fun AllVideoDownloaderApp(
                 actions = {
                     if (destination == AppDestination.HOME) {
                         IconButton(onClick = { destination = AppDestination.SETTINGS }) {
-                            Icon(Icons.Default.Settings, contentDescription = context.getString(R.string.settings))
+                            Icon(
+                                painterResource(R.drawable.ic_settings),
+                                contentDescription = context.getString(R.string.settings),
+                            )
                         }
                     }
                 },
@@ -148,7 +148,7 @@ fun AllVideoDownloaderApp(
                     NavigationBarItem(
                         selected = destination == item,
                         onClick = { destination = item },
-                        icon = { Icon(item.icon, contentDescription = null) },
+                        icon = { Icon(painterResource(item.icon), contentDescription = null) },
                         label = { Text(context.getString(item.label)) },
                     )
                 }

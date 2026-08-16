@@ -6,6 +6,7 @@ All Video Downloader includes or links against third-party open-source component
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — refer to the upstream repository for its current license and notices.
 - [QuickJS](https://bellard.org/quickjs/) and the packaged Python runtime — retain their respective upstream licenses.
 - AndroidX, Jetpack Compose, Google Media3 Transformer, Coil, Kotlin, and Gradle — retain their respective upstream licenses.
+- App-local vector icons are derived from Google Material Icons, licensed under Apache License 2.0.
 
 FFmpeg and aria2 are intentionally not packaged by this application. Audio conversion uses Media3/MediaCodec, and MP4 track muxing uses Android MediaMuxer.
 

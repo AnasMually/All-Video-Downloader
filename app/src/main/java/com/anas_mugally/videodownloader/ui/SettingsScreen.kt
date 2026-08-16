@@ -3,6 +3,7 @@ package com.anas_mugally.videodownloader.ui
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,14 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cookie
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,8 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -98,7 +91,7 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 title = stringResource(R.string.network),
-                icon = Icons.Default.Wifi,
+                icon = R.drawable.ic_wifi,
             ) {
                 SettingSwitchRow(
                     title = stringResource(R.string.wifi_only),
@@ -112,7 +105,7 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 title = stringResource(R.string.appearance),
-                icon = Icons.Default.Palette,
+                icon = R.drawable.ic_palette,
             ) {
                 SettingSwitchRow(
                     title = stringResource(R.string.dynamic_colors),
@@ -135,7 +128,7 @@ fun SettingsScreen(
                         },
                         selected = settings.themeMode == mode,
                         onClick = { onThemeModeChanged(mode) },
-                        leadingIcon = if (mode == ThemeMode.DARK) Icons.Default.DarkMode else null,
+                        leadingIcon = if (mode == ThemeMode.DARK) R.drawable.ic_dark_mode else null,
                     )
                 }
             }
@@ -144,7 +137,7 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 title = stringResource(R.string.storage_and_naming),
-                icon = Icons.Default.Folder,
+                icon = R.drawable.ic_folder,
             ) {
                 Text(
                     text = stringResource(R.string.output_folder_description),
@@ -187,7 +180,7 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 title = stringResource(R.string.notifications),
-                icon = Icons.Default.Notifications,
+                icon = R.drawable.ic_notifications,
             ) {
                 Text(
                     text = if (notificationsGranted || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -221,7 +214,7 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 title = stringResource(R.string.cookies_title),
-                icon = Icons.Default.Cookie,
+                icon = R.drawable.ic_cookie,
             ) {
                 Text(
                     text = stringResource(R.string.cookies_description),
@@ -262,7 +255,7 @@ fun SettingsScreen(
         item {
             SettingsCard(
                 title = stringResource(R.string.privacy_and_engine),
-                icon = Icons.Default.Security,
+                icon = R.drawable.ic_security,
             ) {
                 Text(
                     text = stringResource(R.string.no_storage_permission),
@@ -304,7 +297,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsCard(
     title: String,
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     content: @Composable () -> Unit,
 ) {
     Card(
@@ -319,7 +312,11 @@ private fun SettingsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    painterResource(icon),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
                 Spacer(Modifier.width(10.dp))
                 Text(
                     text = title,
@@ -361,7 +358,7 @@ private fun RadioSettingRow(
     title: String,
     selected: Boolean,
     onClick: () -> Unit,
-    leadingIcon: ImageVector? = null,
+    @DrawableRes leadingIcon: Int? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -369,7 +366,7 @@ private fun RadioSettingRow(
     ) {
         RadioButton(selected = selected, onClick = onClick)
         leadingIcon?.let {
-            Icon(it, contentDescription = null)
+            Icon(painterResource(it), contentDescription = null)
             Spacer(Modifier.width(8.dp))
         }
         TextButton(onClick = onClick) {

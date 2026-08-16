@@ -17,15 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,7 +93,7 @@ fun DownloadsScreen(
                 }
                 if (hasFinished) {
                     TextButton(onClick = onClearFinished) {
-                        Icon(Icons.Default.History, contentDescription = null)
+                        Icon(painterResource(R.drawable.ic_history), contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.clear_finished))
                     }
@@ -126,7 +118,7 @@ fun DownloadsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
-                            Icons.Default.Download,
+                            painterResource(R.drawable.ic_download),
                             contentDescription = null,
                             modifier = Modifier.size(52.dp),
                             tint = MaterialTheme.colorScheme.primary,
@@ -276,12 +268,12 @@ private fun DownloadTaskCard(
                     DownloadStatus.QUEUED,
                     DownloadStatus.WAITING_FOR_WIFI -> {
                         FilledTonalButton(onClick = onPause) {
-                            Icon(Icons.Default.Pause, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_pause), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.pause))
                         }
                         OutlinedButton(onClick = onCancel) {
-                            Icon(Icons.Default.Cancel, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_close), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.cancel))
                         }
@@ -289,12 +281,12 @@ private fun DownloadTaskCard(
 
                     DownloadStatus.PAUSED -> {
                         Button(onClick = onResume) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_play), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.resume))
                         }
                         OutlinedButton(onClick = onCancel) {
-                            Icon(Icons.Default.Cancel, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_close), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.cancel))
                         }
@@ -302,17 +294,17 @@ private fun DownloadTaskCard(
 
                     DownloadStatus.COMPLETED -> {
                         Button(onClick = onPlay) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_play), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.play))
                         }
                         FilledTonalButton(onClick = onShare) {
-                            Icon(Icons.Default.Share, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_share), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.share))
                         }
                         TextButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_delete), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.delete))
                         }
@@ -321,12 +313,12 @@ private fun DownloadTaskCard(
                     DownloadStatus.FAILED,
                     DownloadStatus.CANCELLED -> {
                         Button(onClick = onRetry) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_retry), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.retry))
                         }
                         TextButton(onClick = onDelete) {
-                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_delete), contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.delete))
                         }

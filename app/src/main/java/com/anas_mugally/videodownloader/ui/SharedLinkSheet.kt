@@ -21,12 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -54,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -147,7 +142,10 @@ fun SharedLinkSheet(
                     )
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+                    Icon(
+                        painterResource(R.drawable.ic_close),
+                        contentDescription = stringResource(R.string.close),
+                    )
                 }
             }
 
@@ -177,7 +175,7 @@ fun SharedLinkSheet(
                         modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.Top,
                     ) {
-                        Icon(Icons.Default.Error, contentDescription = null)
+                        Icon(painterResource(R.drawable.ic_error), contentDescription = null)
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -228,7 +226,9 @@ fun SharedLinkSheet(
                         onClick = { viewModel.selectKind(DownloadKind.VIDEO) },
                         enabled = videoFormats.isNotEmpty(),
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { Icon(Icons.Default.Movie, contentDescription = null) },
+                        icon = {
+                            Icon(painterResource(R.drawable.ic_movie), contentDescription = null)
+                        },
                     ) {
                         Text(stringResource(R.string.video_mp4))
                     }
@@ -237,7 +237,9 @@ fun SharedLinkSheet(
                         onClick = { viewModel.selectKind(DownloadKind.AUDIO) },
                         enabled = audioFormats.isNotEmpty(),
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { Icon(Icons.Default.Headphones, contentDescription = null) },
+                        icon = {
+                            Icon(painterResource(R.drawable.ic_headphones), contentDescription = null)
+                        },
                     ) {
                         Text(stringResource(R.string.audio_m4a))
                     }
@@ -299,7 +301,7 @@ fun SharedLinkSheet(
                         .height(54.dp),
                     shape = RoundedCornerShape(18.dp),
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = null)
+                    Icon(painterResource(R.drawable.ic_download), contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.start_download))
                 }

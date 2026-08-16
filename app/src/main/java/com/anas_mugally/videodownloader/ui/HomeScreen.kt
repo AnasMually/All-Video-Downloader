@@ -17,16 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -49,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -119,7 +110,9 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.video_link)) },
                 placeholder = { Text(stringResource(R.string.video_link_hint)) },
-                leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                leadingIcon = {
+                    Icon(painterResource(R.drawable.ic_link), contentDescription = null)
+                },
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(
@@ -133,13 +126,19 @@ fun HomeScreen(
                                 if (text.isNotBlank()) onUrlChange(text)
                             },
                         ) {
-                            Icon(Icons.Default.ContentPaste, contentDescription = null)
+                            Icon(
+                                painterResource(R.drawable.ic_content_paste),
+                                contentDescription = null,
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text(stringResource(R.string.paste))
                         }
                         if (state.url.isNotBlank()) {
                             IconButton(onClick = { onUrlChange("") }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear))
+                                Icon(
+                                    painterResource(R.drawable.ic_close),
+                                    contentDescription = stringResource(R.string.clear),
+                                )
                             }
                         }
                     }
@@ -171,7 +170,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.width(10.dp))
                 } else {
-                    Icon(Icons.Default.Search, contentDescription = null)
+                    Icon(painterResource(R.drawable.ic_search), contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(
@@ -196,7 +195,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.Top,
                     ) {
                         Icon(
-                            Icons.Default.Error,
+                            painterResource(R.drawable.ic_error),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                         )
@@ -264,7 +263,9 @@ fun HomeScreen(
                         onClick = { onKindSelected(DownloadKind.VIDEO) },
                         enabled = hasVideo,
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { Icon(Icons.Default.Movie, contentDescription = null) },
+                        icon = {
+                            Icon(painterResource(R.drawable.ic_movie), contentDescription = null)
+                        },
                     ) {
                         Text(stringResource(R.string.video))
                     }
@@ -273,7 +274,9 @@ fun HomeScreen(
                         onClick = { onKindSelected(DownloadKind.AUDIO) },
                         enabled = hasAudio,
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { Icon(Icons.Default.Headphones, contentDescription = null) },
+                        icon = {
+                            Icon(painterResource(R.drawable.ic_headphones), contentDescription = null)
+                        },
                     ) {
                         Text(stringResource(R.string.audio))
                     }
@@ -326,7 +329,7 @@ fun HomeScreen(
                         .height(58.dp),
                     shape = RoundedCornerShape(18.dp),
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = null)
+                    Icon(painterResource(R.drawable.ic_download), contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.start_download))
                 }
@@ -387,7 +390,7 @@ private fun FormatRow(
             }
             if (selected) {
                 Icon(
-                    Icons.Default.CheckCircle,
+                    painterResource(R.drawable.ic_download_done),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                 )
