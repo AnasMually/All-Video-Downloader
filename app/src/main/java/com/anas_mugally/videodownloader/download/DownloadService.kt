@@ -242,7 +242,7 @@ class DownloadService : Service() {
         if (!downloadWakeLock.isHeld) downloadWakeLock.acquire(DOWNLOAD_WAKE_LOCK_TIMEOUT_MS)
         try {
             runtime.ensureReady()
-            val output = createFinalMedia(taskSnapshot, taskDirectory)
+            val output = createFinalMediaWithRecovery(taskSnapshot, taskDirectory)
             throwIfStopRequested(taskId)
             val saved = MediaStoreWriter.save(
                 context = this,
@@ -302,6 +302,20 @@ class DownloadService : Service() {
         } finally {
             if (downloadWakeLock.isHeld) downloadWakeLock.release()
             currentTaskId = null
+        }
+    }
+
+    private suspend fun createFinalMediaWithRecovery(task: DownloadTask, directory: File): File {
+        return try {
+            createFinalMedia(task, directory)
+        } catch (error: Throwable) {
+            if (error is CancellationException || !runtime.recoverFromDownloadError(error)) throw error
+            throwIfStopRequested(task.id)
+            directory.listFiles().orEmpty().forEach { file ->
+                check(file.deleteRecursively()) { "Unable to reset partial download files" }
+            }
+            updateProgress(task.id, 0)
+            createFinalMedia(task, directory)
         }
     }
 

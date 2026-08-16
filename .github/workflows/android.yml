@@ -24,6 +24,10 @@ jobs:
         run: ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
       - name: Verify 16 KB native-library alignment
         run: bash scripts/check-elf-alignment.sh app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+      - name: Verify embedded Python architectures
+        run: |
+          bash scripts/check-python-runtime-abi.sh app/build/outputs/apk/debug/app-arm64-v8a-debug.apk arm64-v8a ELF64 AArch64
+          bash scripts/check-python-runtime-abi.sh app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk armeabi-v7a ELF32 ARM
       - name: Verify heavy media binaries are absent
         run: |
           for apk in app/build/outputs/apk/debug/*.apk; do
