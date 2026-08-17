@@ -28,7 +28,25 @@ data class MediaStream(
     val headers: Map<String, String>,
     val extension: String,
     val fileSize: Long?,
-)
+    val protocol: String = "",
+    val videoCodec: String? = null,
+    val audioCodec: String? = null,
+) {
+    val isAdaptiveManifest: Boolean
+        get() {
+            val normalized = protocol.lowercase()
+            return normalized.contains("m3u8") ||
+                normalized.contains("dash") ||
+                normalized.contains("segments") ||
+                url.substringBefore('?').lowercase().let { it.endsWith(".m3u8") || it.endsWith(".mpd") }
+        }
+
+    val isVideoOnly: Boolean
+        get() = !videoCodec.isNullOrBlank() && audioCodec.isNullOrBlank()
+
+    val isAudioOnly: Boolean
+        get() = videoCodec.isNullOrBlank() && !audioCodec.isNullOrBlank()
+}
 
 data class ResolvedDownload(
     val id: String,
@@ -76,7 +94,12 @@ class VideoFlowApi {
 
     suspend fun extract(rawUrl: String): MediaInfo = withContext(Dispatchers.IO) {
         val url = UrlTools.extractHttpUrl(rawUrl) ?: throw IllegalArgumentException("Invalid web link")
-        val root = requestJson("extract.php", body = JSONObject().put("url", url))
+        val root = requestJson(
+            "extract.php",
+            body = JSONObject()
+                .put("url", url)
+                .put("adaptive_client", true),
+        )
         val video = root.getJSONObject("video")
         val downloads = video.optJSONArray("downloads")
         val formats = buildList {
@@ -166,14 +189,14 @@ class VideoFlowApi {
         downloadId: String,
         audioTrackId: String? = null,
     ): ResolvedDownload = withContext(Dispatchers.IO) {
-        // Download tasks persist the selected track together with the quality in one
-        // backward-compatible string. The service can keep using its existing two-arg
-        // resolve call while newer tasks recover the exact selected/original track.
         val encoded = downloadId.split("@@", limit = 2)
         val actualDownloadId = encoded.first()
         val actualAudioTrackId = audioTrackId?.takeIf(String::isNotBlank)
             ?: encoded.getOrNull(1)?.takeIf(String::isNotBlank)
-        val body = JSONObject().put("url", sourceUrl).put("download_id", actualDownloadId)
+        val body = JSONObject()
+            .put("url", sourceUrl)
+            .put("download_id", actualDownloadId)
+            .put("adaptive_client", true)
         if (actualAudioTrackId != null) body.put("audio_track_id", actualAudioTrackId)
         val root = requestJson("resolve.php", body = body)
         parseDownload(root.getJSONObject("download"))
@@ -224,6 +247,9 @@ class VideoFlowApi {
             headers = headers,
             extension = item.optString("ext", "mp4"),
             fileSize = item.optLong("filesize", -1L).takeIf { it > 0L },
+            protocol = item.optString("protocol"),
+            videoCodec = item.optString("vcodec").takeIf { it.isNotBlank() && !it.equals("none", true) },
+            audioCodec = item.optString("acodec").takeIf { it.isNotBlank() && !it.equals("none", true) },
         )
     }
 
