@@ -74,8 +74,7 @@ fun AllVideoDownloaderApp(
     var notificationsGranted by remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED,
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED,
         )
     }
 
@@ -91,14 +90,8 @@ fun AllVideoDownloaderApp(
     }
 
     LaunchedEffect(launchData.sequence, tasks) {
-        if (launchData.screen == MainActivity.SCREEN_DOWNLOADS) {
-            destination = AppDestination.DOWNLOADS
-        }
-        if (
-            launchData.play &&
-            launchData.sequence != handledPlaySequence &&
-            launchData.taskId != null
-        ) {
+        if (launchData.screen == MainActivity.SCREEN_DOWNLOADS) destination = AppDestination.DOWNLOADS
+        if (launchData.play && launchData.sequence != handledPlaySequence && launchData.taskId != null) {
             val task = tasks.firstOrNull { it.id == launchData.taskId && it.outputUri != null }
             if (task != null) {
                 handledPlaySequence = launchData.sequence
@@ -114,8 +107,7 @@ fun AllVideoDownloaderApp(
 
     val requestDownload = {
         val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         if (needsPermission) {
             enqueueAfterPermission = true
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -131,20 +123,14 @@ fun AllVideoDownloaderApp(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (destination == AppDestination.HOME) {
-                            context.getString(R.string.app_name)
-                        } else {
-                            context.getString(destination.label)
-                        },
+                        if (destination == AppDestination.HOME) context.getString(R.string.app_name)
+                        else context.getString(destination.label),
                     )
                 },
                 actions = {
                     if (destination == AppDestination.HOME) {
                         IconButton(onClick = { destination = AppDestination.SETTINGS }) {
-                            Icon(
-                                painterResource(R.drawable.ic_settings),
-                                contentDescription = context.getString(R.string.settings),
-                            )
+                            Icon(painterResource(R.drawable.ic_settings), contentDescription = context.getString(R.string.settings))
                         }
                     }
                 },
@@ -174,6 +160,9 @@ fun AllVideoDownloaderApp(
                 onAnalyze = viewModel::analyze,
                 onKindSelected = viewModel::selectKind,
                 onFormatSelected = viewModel::selectFormat,
+                onAudioTrackSelected = viewModel::selectAudioTrack,
+                onSubtitleSelected = viewModel::selectSubtitle,
+                onSubtitleDownload = viewModel::downloadSelectedSubtitle,
                 onDownload = requestDownload,
                 onAdClick = { ad ->
                     viewModel.recordAdClick(ad)
@@ -205,9 +194,7 @@ fun AllVideoDownloaderApp(
                 onOutputFolderSaved = viewModel::setOutputFolder,
                 onFileNameModeChanged = viewModel::setFileNameMode,
                 onRequestNotifications = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                 },
             )
         }
@@ -216,9 +203,7 @@ fun AllVideoDownloaderApp(
 
 private fun openAd(context: Context, ad: MyAppAd) {
     val uri = runCatching { Uri.parse(ad.urlApp) }.getOrNull() ?: return
-    runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-    }
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
 }
 
 private fun openDownloadedMediaExternally(context: Context, task: DownloadTask) {
@@ -249,7 +234,5 @@ private fun shareDownloadedMedia(context: Context, task: DownloadTask) {
         clipData = ClipData.newUri(context.contentResolver, task.outputName ?: task.title, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(
-        Intent.createChooser(share, context.getString(R.string.share_download)),
-    )
+    context.startActivity(Intent.createChooser(share, context.getString(R.string.share_download)))
 }
