@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">Аудиодорожка</string>
+    <string name="audio_original">Оригинал</string>
+    <string name="audio_default">По умолчанию</string>
+    <string name="subtitles">Субтитры</string>
+    <string name="subtitle_auto">Созданы автоматически</string>
+    <string name="download_subtitle">Скачать</string>
+    <string name="subtitle_download_started">Загрузка субтитров началась.</string>
+    <string name="subtitle_download_failed">Не удалось скачать субтитры.</string>
+</resources>
