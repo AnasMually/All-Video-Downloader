@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">Faixa de áudio</string>
+    <string name="audio_original">Original</string>
+    <string name="audio_default">Padrão</string>
+    <string name="subtitles">Legendas</string>
+    <string name="subtitle_auto">Geradas automaticamente</string>
+    <string name="download_subtitle">Baixar</string>
+    <string name="subtitle_download_started">O download da legenda foi iniciado.</string>
+    <string name="subtitle_download_failed">Não foi possível baixar a legenda.</string>
+</resources>
