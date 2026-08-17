@@ -22,7 +22,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -32,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,15 +52,12 @@ fun SettingsScreen(
     contentPadding: PaddingValues,
     settings: AppSettings,
     engineState: EngineState,
-    cookiesImported: Boolean,
     notificationsGranted: Boolean,
     onWifiOnlyChanged: (Boolean) -> Unit,
     onDynamicColorChanged: (Boolean) -> Unit,
     onThemeModeChanged: (ThemeMode) -> Unit,
     onOutputFolderSaved: (String) -> Unit,
     onFileNameModeChanged: (FileNameMode) -> Unit,
-    onImportCookies: () -> Unit,
-    onClearCookies: () -> Unit,
     onRequestNotifications: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -89,10 +84,7 @@ fun SettingsScreen(
         }
 
         item {
-            SettingsCard(
-                title = stringResource(R.string.network),
-                icon = R.drawable.ic_wifi,
-            ) {
+            SettingsCard(title = stringResource(R.string.network), icon = R.drawable.ic_wifi) {
                 SettingSwitchRow(
                     title = stringResource(R.string.wifi_only),
                     description = stringResource(R.string.wifi_only_description),
@@ -103,10 +95,7 @@ fun SettingsScreen(
         }
 
         item {
-            SettingsCard(
-                title = stringResource(R.string.appearance),
-                icon = R.drawable.ic_palette,
-            ) {
+            SettingsCard(title = stringResource(R.string.appearance), icon = R.drawable.ic_palette) {
                 SettingSwitchRow(
                     title = stringResource(R.string.dynamic_colors),
                     description = stringResource(R.string.dynamic_colors_description),
@@ -135,10 +124,7 @@ fun SettingsScreen(
         }
 
         item {
-            SettingsCard(
-                title = stringResource(R.string.storage_and_naming),
-                icon = R.drawable.ic_folder,
-            ) {
+            SettingsCard(title = stringResource(R.string.storage_and_naming), icon = R.drawable.ic_folder) {
                 Text(
                     text = stringResource(R.string.output_folder_description),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -178,10 +164,7 @@ fun SettingsScreen(
         }
 
         item {
-            SettingsCard(
-                title = stringResource(R.string.notifications),
-                icon = R.drawable.ic_notifications,
-            ) {
+            SettingsCard(title = stringResource(R.string.notifications), icon = R.drawable.ic_notifications) {
                 Text(
                     text = if (notificationsGranted || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                         stringResource(R.string.notifications_enabled)
@@ -212,51 +195,7 @@ fun SettingsScreen(
         }
 
         item {
-            SettingsCard(
-                title = stringResource(R.string.cookies_title),
-                icon = R.drawable.ic_cookie,
-            ) {
-                Text(
-                    text = stringResource(R.string.cookies_description),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = if (cookiesImported) {
-                        stringResource(R.string.cookies_ready)
-                    } else {
-                        stringResource(R.string.cookies_not_imported)
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (cookiesImported) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = onImportCookies) {
-                        Text(
-                            if (cookiesImported) {
-                                stringResource(R.string.replace_cookies)
-                            } else {
-                                stringResource(R.string.import_cookies)
-                            },
-                        )
-                    }
-                    if (cookiesImported) {
-                        OutlinedButton(onClick = onClearCookies) {
-                            Text(stringResource(R.string.remove))
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            SettingsCard(
-                title = stringResource(R.string.privacy_and_engine),
-                icon = R.drawable.ic_security,
-            ) {
+            SettingsCard(title = stringResource(R.string.privacy_and_engine), icon = R.drawable.ic_security) {
                 Text(
                     text = stringResource(R.string.no_storage_permission),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -279,6 +218,11 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                Text(
+                    text = BuildConfig.VIDEOFLOW_API_BASE_URL,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(
                     text = stringResource(R.string.app_version, BuildConfig.VERSION_NAME),
                     style = MaterialTheme.typography.bodySmall,
@@ -303,9 +247,7 @@ private fun SettingsCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
