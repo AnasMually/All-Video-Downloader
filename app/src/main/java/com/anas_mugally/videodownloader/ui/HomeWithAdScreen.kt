@@ -22,6 +22,9 @@ fun HomeWithAdScreen(
     onAnalyze: () -> Unit,
     onKindSelected: (DownloadKind) -> Unit,
     onFormatSelected: (String) -> Unit,
+    onAudioTrackSelected: (String) -> Unit,
+    onSubtitleSelected: (String) -> Unit,
+    onSubtitleDownload: () -> Unit,
     onDownload: () -> Unit,
     onAdClick: (MyAppAd) -> Unit,
 ) {
@@ -44,6 +47,9 @@ fun HomeWithAdScreen(
             onAnalyze = onAnalyze,
             onKindSelected = onKindSelected,
             onFormatSelected = onFormatSelected,
+            onAudioTrackSelected = onAudioTrackSelected,
+            onSubtitleSelected = onSubtitleSelected,
+            onSubtitleDownload = onSubtitleDownload,
             onDownload = onDownload,
         )
 
