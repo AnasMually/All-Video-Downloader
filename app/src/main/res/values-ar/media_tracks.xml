@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">المسار الصوتي</string>
+    <string name="audio_original">أصلي</string>
+    <string name="audio_default">افتراضي</string>
+    <string name="subtitles">الترجمات</string>
+    <string name="subtitle_auto">مولّدة تلقائيًا</string>
+    <string name="download_subtitle">تنزيل</string>
+    <string name="subtitle_download_started">بدأ تنزيل الترجمة.</string>
+    <string name="subtitle_download_failed">تعذر تنزيل الترجمة.</string>
+</resources>
