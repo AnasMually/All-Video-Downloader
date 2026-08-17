@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,7 +67,7 @@ fun AllVideoDownloaderApp(
     val engineState by viewModel.engineState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var destination by remember { mutableStateOf(AppDestination.HOME) }
-    var playingTaskId by remember { mutableStateOf<String?>(null) }
+    var handledPlaySequence by remember { mutableLongStateOf(Long.MIN_VALUE) }
     var enqueueAfterPermission by remember { mutableStateOf(false) }
     var notificationsGranted by remember {
         mutableStateOf(
@@ -87,11 +88,21 @@ fun AllVideoDownloaderApp(
         }
     }
 
-    LaunchedEffect(launchData.sequence) {
+    LaunchedEffect(launchData.sequence, tasks) {
         if (launchData.screen == MainActivity.SCREEN_DOWNLOADS) {
             destination = AppDestination.DOWNLOADS
         }
-        if (launchData.play) playingTaskId = launchData.taskId
+        if (
+            launchData.play &&
+            launchData.sequence != handledPlaySequence &&
+            launchData.taskId != null
+        ) {
+            val task = tasks.firstOrNull { it.id == launchData.taskId && it.outputUri != null }
+            if (task != null) {
+                handledPlaySequence = launchData.sequence
+                openDownloadedMediaExternally(context, task)
+            }
+        }
     }
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
@@ -172,7 +183,7 @@ fun AllVideoDownloaderApp(
                 onCancel = viewModel::cancel,
                 onDelete = viewModel::delete,
                 onClearFinished = viewModel::clearFinished,
-                onPlay = { task -> playingTaskId = task.id },
+                onPlay = { task -> openDownloadedMediaExternally(context, task) },
                 onShare = { task -> shareDownloadedMedia(context, task) },
             )
 
@@ -194,11 +205,26 @@ fun AllVideoDownloaderApp(
             )
         }
     }
+}
 
-    val playerTask = playingTaskId?.let { id -> tasks.firstOrNull { it.id == id } }
-    if (playerTask?.outputUri != null) {
-        PlayerDialog(task = playerTask, onDismiss = { playingTaskId = null })
+private fun openDownloadedMediaExternally(context: Context, task: DownloadTask) {
+    val uri = task.outputUri?.let(Uri::parse) ?: return
+    val mimeType = task.outputMimeType ?: if (task.kind.name == "AUDIO") "audio/*" else "video/*"
+    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, mimeType)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        clipData = ClipData.newUri(context.contentResolver, task.outputName ?: task.title, uri)
     }
+    runCatching { context.startActivity(viewIntent) }
+        .recoverCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "*/*")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    clipData = viewIntent.clipData
+                },
+            )
+        }
 }
 
 private fun shareDownloadedMedia(context: Context, task: DownloadTask) {

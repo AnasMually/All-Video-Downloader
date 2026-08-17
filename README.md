@@ -42,6 +42,7 @@ https://anasmugally.vps.webdock.cloud/VideoDownloader/api/v1/
 - ملفات Cookies الخاصة بمحرك yt-dlp المحلي.
 - منطق استخراج الجودات محليًا.
 - ABI splits التي كانت مطلوبة بسبب runtime المحلي.
+- ExoPlayer وواجهة المشغل الداخلي.
 
 صيانة yt-dlp وتحديث Extractors تتم مركزيًا على الـVPS، لذلك لا يحتاج المستخدم تحديث APK عندما يتغير extractor فقط.
 
@@ -57,7 +58,7 @@ https://anasmugally.vps.webdock.cloud/VideoDownloader/api/v1/
 - نسبة تقدم، bytes المنزلة، الحجم، السرعة والوقت المتبقي في الشاشة والإشعار.
 - حفظ النتيجة عبر MediaStore داخل `Movies` أو `Music` دون صلاحيات إدارة الملفات.
 - إذا أعاد الـAPI فيديو وصوت منفصلين لجودة عالية، ينزلهما التطبيق مباشرة ثم يدمجهما محليًا باستخدام Android MediaMuxer/Media3.
-- سجل تنزيلات محلي، تشغيل داخل التطبيق ومشاركة الملف الناتج.
+- سجل تنزيلات محلي، وفتح الفيديو أو الصوت عبر مشغل خارجي باستخدام Android `ACTION_VIEW`، ومشاركة الملف الناتج.
 - Wi-Fi only، اسم مجلد مخصص، خيارات تسمية، الوضع الداكن والألوان الديناميكية.
 - استقبال الروابط عبر نافذة المشاركة.
 - واجهة عربية وإنجليزية مع RTL.
@@ -103,7 +104,7 @@ app/build/outputs/apk/debug/app-debug.apk
 - `download/DownloadService.kt`: تنزيل HTTP مباشر من روابط المصدر وإدارة الطابور والتقدم.
 - `download/OnDeviceMediaProcessor.kt`: دمج video/audio أو تحويل الصوت عند الحاجة.
 - `download/MediaStoreWriter.kt`: حفظ الملف النهائي عبر MediaStore.
-- `ui/`: واجهات Material 3.
+- `ui/`: واجهات Material 3؛ تشغيل الملفات يتم عبر مشغل خارجي ولا يوجد Player داخلي.
 
 ## التحقق
 
