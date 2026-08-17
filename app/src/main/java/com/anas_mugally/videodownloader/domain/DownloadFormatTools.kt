@@ -3,14 +3,6 @@ package com.anas_mugally.videodownloader.domain
 import java.util.Locale
 
 object DownloadFormatTools {
-    fun primarySelector(task: DownloadTask): String = when (task.kind) {
-        DownloadKind.AUDIO -> "${task.formatId}/bestaudio[ext=m4a]/bestaudio"
-        DownloadKind.VIDEO -> "${task.formatId}/best[ext=mp4]"
-    }
-
-    fun companionAudioSelector(): String =
-        "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio[acodec^=mp4a]/bestaudio"
-
     fun outputFileName(task: DownloadTask, extension: String): String {
         val safeTitle = safeFileStem(task.title).ifBlank { "Media" }
         val safeMediaId = safeFileStem(task.mediaId.orEmpty()).ifBlank { task.id.take(8) }
@@ -32,11 +24,22 @@ object DownloadFormatTools {
     }
 
     fun mimeType(extension: String, audioOnly: Boolean): String {
-        val normalizedExtension = extension.lowercase(Locale.ROOT)
-        return when {
-            audioOnly && normalizedExtension == "mp3" -> "audio/mpeg"
-            audioOnly -> "audio/mp4"
-            else -> "video/mp4"
+        val ext = extension.lowercase(Locale.ROOT)
+        return if (audioOnly) {
+            when (ext) {
+                "mp3" -> "audio/mpeg"
+                "webm" -> "audio/webm"
+                "ogg", "opus" -> "audio/ogg"
+                "aac" -> "audio/aac"
+                else -> "audio/mp4"
+            }
+        } else {
+            when (ext) {
+                "webm" -> "video/webm"
+                "mov" -> "video/quicktime"
+                "mkv" -> "video/x-matroska"
+                else -> "video/mp4"
+            }
         }
     }
 
