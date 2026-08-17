@@ -1,13 +1,10 @@
 # Third-party notices
 
-All Video Downloader includes or links against third-party open-source components. Each component remains subject to its upstream license and notices.
+All Video Downloader links against third-party open-source components. Each component remains subject to its upstream license and notices.
 
-- [youtubedl-android](https://github.com/yausername/youtubedl-android) — GPL-3.0; Android wrapper and packaged runtime integration.
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — refer to the upstream repository for its current license and notices.
-- [QuickJS](https://bellard.org/quickjs/) and the packaged Python runtime — retain their respective upstream licenses.
-- AndroidX, Jetpack Compose, Google Media3 Transformer, Coil, Kotlin, and Gradle — retain their respective upstream licenses.
+- AndroidX, Jetpack Compose, Google Media3, Coil, Kotlin, and Gradle — retain their respective upstream licenses.
 - App-local vector icons are derived from Google Material Icons, licensed under Apache License 2.0.
 
-FFmpeg and aria2 are intentionally not packaged by this application. Audio conversion uses Media3/MediaCodec, and MP4 track muxing uses Android MediaMuxer.
+The Android application no longer packages Python, yt-dlp, QuickJS, FFmpeg, aria2, or youtubedl-android. Video extraction is performed by the separately deployed VideoFlow API. The app receives metadata and temporary source-media URLs from that API, then downloads the selected media directly on the device. Media3/MediaCodec and Android MediaMuxer are used only when client-side audio conversion or video/audio muxing is required.
 
-This notice is informational and does not replace the license files distributed by upstream projects. A production release should include the exact notices corresponding to the resolved dependency and native-binary versions.
+This notice is informational and does not replace the license files distributed by upstream projects. A production release should include the exact notices corresponding to the resolved dependency versions.

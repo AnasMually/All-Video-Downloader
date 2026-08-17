@@ -1,13 +1,12 @@
 package com.anas_mugally.videodownloader.ui
 
 import android.app.Application
-import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.anas_mugally.videodownloader.R
 import com.anas_mugally.videodownloader.VideoDownloaderApp
-import com.anas_mugally.videodownloader.data.YtDlpExtractor
+import com.anas_mugally.videodownloader.data.ApiException
 import com.anas_mugally.videodownloader.domain.AppSettings
 import com.anas_mugally.videodownloader.domain.DownloadKind
 import com.anas_mugally.videodownloader.domain.DownloadStatus
@@ -40,7 +39,6 @@ data class MainUiState(
     val selectedVideoFormatId: String? = null,
     val selectedAudioFormatId: String? = null,
     val error: String? = null,
-    val cookiesImported: Boolean = false,
 )
 
 data class UiEvent(@StringRes val message: Int)
@@ -48,9 +46,8 @@ data class UiEvent(@StringRes val message: Int)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as VideoDownloaderApp
     private val repository = app.repository
-    private val runtime = app.ytDlpRuntime
-    private val extractor = YtDlpExtractor(runtime)
-    private val _state = MutableStateFlow(MainUiState(cookiesImported = runtime.hasCookies()))
+    private val api = app.api
+    private val _state = MutableStateFlow(MainUiState())
     private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 8)
     private var analysisJob: Job? = null
     private val enqueueMutex = Mutex()
@@ -67,7 +64,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
-    val engineState = runtime.state
+    val engineState = api.state
 
     fun setUrl(value: String) {
         analysisJob?.cancel()
@@ -100,12 +97,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 error = null,
             )
             try {
-                val media = extractor.extract(url)
+                val media = api.extract(url)
                 val video = media.formats.firstOrNull(MediaFormat::hasVideo)
                 val audio = media.formats
                     .filter { it.hasAudio && !it.hasVideo }
                     .maxByOrNull { it.audioBitrateKbps ?: 0 }
-                    ?: media.formats.firstOrNull(MediaFormat::hasAudio)
+                    ?: media.formats.firstOrNull { it.hasAudio && !it.hasVideo }
                 _state.value = _state.value.copy(
                     analyzing = false,
                     media = media,
@@ -143,13 +140,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             DownloadKind.AUDIO -> current.selectedAudioFormatId
         } ?: return
         val format = when (current.selectedKind) {
-            DownloadKind.VIDEO -> media.formats.firstOrNull {
-                it.formatId == selectedId && it.hasVideo
-            }
-            DownloadKind.AUDIO -> media.formats.firstOrNull {
-                it.formatId == selectedId && it.hasAudio && !it.hasVideo
-            }
+            DownloadKind.VIDEO -> media.formats.firstOrNull { it.formatId == selectedId && it.hasVideo }
+            DownloadKind.AUDIO -> media.formats.firstOrNull { it.formatId == selectedId && it.hasAudio && !it.hasVideo }
         } ?: return
+
         viewModelScope.launch {
             val task = enqueueMutex.withLock {
                 val duplicate = repository.tasks.first().any { existing ->
@@ -195,11 +189,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun pause(taskId: String) = DownloadController.pause(app, taskId)
-
     fun resume(taskId: String) = DownloadController.resume(app, taskId)
-
     fun retry(taskId: String) = DownloadController.retry(app, taskId)
-
     fun cancel(taskId: String) = DownloadController.cancel(app, taskId)
 
     fun delete(taskId: String) {
@@ -222,33 +213,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setWifiOnly(enabled: Boolean) = updateSettings { it.copy(wifiOnly = enabled) }
-
     fun setDynamicColor(enabled: Boolean) = updateSettings { it.copy(dynamicColor = enabled) }
-
     fun setThemeMode(mode: ThemeMode) = updateSettings { it.copy(themeMode = mode) }
-
     fun setOutputFolder(folder: String) = updateSettings { it.copy(outputFolder = folder) }
-
     fun setFileNameMode(mode: FileNameMode) = updateSettings { it.copy(fileNameMode = mode) }
-
-    fun importCookies(uri: Uri) {
-        viewModelScope.launch {
-            runCatching { runtime.importCookies(uri) }
-                .onSuccess {
-                    _state.value = _state.value.copy(cookiesImported = true)
-                    _events.emit(UiEvent(R.string.cookies_imported))
-                }
-                .onFailure { _events.emit(UiEvent(R.string.cookies_import_failed)) }
-        }
-    }
-
-    fun clearCookies() {
-        viewModelScope.launch {
-            runtime.clearCookies()
-            _state.value = _state.value.copy(cookiesImported = false)
-            _events.emit(UiEvent(R.string.cookies_removed))
-        }
-    }
 
     private fun updateSettings(transform: (AppSettings) -> AppSettings) {
         viewModelScope.launch { repository.updateSettings(transform) }
@@ -256,7 +224,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun userFacingError(error: Throwable): String {
         if (error is IllegalArgumentException) return app.getString(R.string.invalid_url)
-        val technical = error.message
+        val technical = when (error) {
+            is ApiException -> error.code
+            else -> error.message
+        }
             ?.lineSequence()
             ?.lastOrNull { it.isNotBlank() }
             ?.trim()

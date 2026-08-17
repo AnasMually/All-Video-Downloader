@@ -11,19 +11,16 @@ android {
         applicationId = "com.anas_mugally.videodownloader"
         minSdk = 29
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.0"
+        versionCode = 6
+        versionName = "1.4.0"
         vectorDrawables.useSupportLibrary = true
 
-    }
-
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = false
-        }
+        buildConfigField(
+            "String",
+            "VIDEOFLOW_API_BASE_URL",
+            "\"https://anasmugally.vps.webdock.cloud/VideoDownloader/api/v1/\"",
+        )
+        buildConfigField("String", "VIDEOFLOW_API_KEY", "\"\"")
     }
 
     compileOptions {
@@ -47,7 +44,6 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        jniLibs.useLegacyPackaging = true
     }
 
     buildTypes {
@@ -75,7 +71,6 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.5.1")
     implementation("androidx.media3:media3-transformer:1.5.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }

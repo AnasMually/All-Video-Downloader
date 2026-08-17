@@ -6,22 +6,6 @@ import org.junit.Test
 
 class DownloadFormatToolsTest {
     @Test
-    fun selectedVideoIsDownloadedDirectlyWithoutFfmpegMergeSyntax() {
-        assertEquals(
-            "137/best[ext=mp4]",
-            DownloadFormatTools.primarySelector(task(formatId = "137")),
-        )
-    }
-
-    @Test
-    fun companionAudioPrefersM4a() {
-        assertEquals(
-            "bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio[acodec^=mp4a]/bestaudio",
-            DownloadFormatTools.companionAudioSelector(),
-        )
-    }
-
-    @Test
     fun outputFileNameHonorsNamingModeAndM4a() {
         assertEquals(
             "A title-media-id.m4a",
@@ -44,6 +28,7 @@ class DownloadFormatToolsTest {
     fun mimeTypesMatchFinalOutputContainers() {
         assertEquals("audio/mp4", DownloadFormatTools.mimeType("m4a", true))
         assertEquals("video/mp4", DownloadFormatTools.mimeType("mp4", false))
+        assertEquals("video/webm", DownloadFormatTools.mimeType("webm", false))
     }
 
     @Test
@@ -57,7 +42,6 @@ class DownloadFormatToolsTest {
     }
 
     private fun task(
-        formatId: String = "140",
         kind: DownloadKind = DownloadKind.VIDEO,
         title: String = "A title",
     ) = DownloadTask(
@@ -66,9 +50,9 @@ class DownloadFormatToolsTest {
         sourceUrl = "https://example.com/media",
         title = title,
         thumbnailUrl = null,
-        formatId = formatId,
-        formatLabel = formatId,
-        formatHasAudio = false,
+        formatId = "single:18",
+        formatLabel = "360p",
+        formatHasAudio = true,
         kind = kind,
         fileNameMode = FileNameMode.TITLE_AND_ID,
     )
