@@ -86,11 +86,6 @@ fun AllVideoDownloaderApp(
             destination = AppDestination.DOWNLOADS
         }
     }
-    val cookiesDocument = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        uri?.let(viewModel::importCookies)
-    }
 
     LaunchedEffect(launchData.sequence) {
         if (launchData.screen == MainActivity.SCREEN_DOWNLOADS) {
@@ -185,15 +180,12 @@ fun AllVideoDownloaderApp(
                 contentPadding = padding,
                 settings = settings,
                 engineState = engineState,
-                cookiesImported = state.cookiesImported,
                 notificationsGranted = notificationsGranted,
                 onWifiOnlyChanged = viewModel::setWifiOnly,
                 onDynamicColorChanged = viewModel::setDynamicColor,
                 onThemeModeChanged = viewModel::setThemeMode,
                 onOutputFolderSaved = viewModel::setOutputFolder,
                 onFileNameModeChanged = viewModel::setFileNameMode,
-                onImportCookies = { cookiesDocument.launch(arrayOf("text/plain", "text/*")) },
-                onClearCookies = viewModel::clearCookies,
                 onRequestNotifications = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
