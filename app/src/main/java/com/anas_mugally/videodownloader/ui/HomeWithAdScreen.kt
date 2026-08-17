@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import com.anas_mugally.videodownloader.data.EngineState
 import com.anas_mugally.videodownloader.data.MyAppAd
@@ -26,13 +25,10 @@ fun HomeWithAdScreen(
     onDownload: () -> Unit,
     onAdClick: (MyAppAd) -> Unit,
 ) {
-    val layoutDirection = LocalLayoutDirection.current
     val showAd = state.media != null && ad != null
     val homePadding = if (showAd) {
         PaddingValues(
-            start = contentPadding.calculateStartPadding(layoutDirection),
             top = contentPadding.calculateTopPadding(),
-            end = contentPadding.calculateEndPadding(layoutDirection),
             bottom = contentPadding.calculateBottomPadding() + 132.dp,
         )
     } else {
