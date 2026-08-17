@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anas_mugally.videodownloader.MainActivity
 import com.anas_mugally.videodownloader.R
+import com.anas_mugally.videodownloader.data.MyAppAd
 import com.anas_mugally.videodownloader.domain.DownloadTask
 import kotlinx.coroutines.flow.collectLatest
 
@@ -65,6 +66,7 @@ fun AllVideoDownloaderApp(
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val engineState by viewModel.engineState.collectAsStateWithLifecycle()
+    val currentAd by viewModel.currentAd.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var destination by remember { mutableStateOf(AppDestination.HOME) }
     var handledPlaySequence by remember { mutableLongStateOf(Long.MIN_VALUE) }
@@ -163,15 +165,20 @@ fun AllVideoDownloaderApp(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         when (destination) {
-            AppDestination.HOME -> HomeScreen(
+            AppDestination.HOME -> HomeWithAdScreen(
                 contentPadding = padding,
                 state = state,
                 engineState = engineState,
+                ad = currentAd,
                 onUrlChange = viewModel::setUrl,
                 onAnalyze = viewModel::analyze,
                 onKindSelected = viewModel::selectKind,
                 onFormatSelected = viewModel::selectFormat,
                 onDownload = requestDownload,
+                onAdClick = { ad ->
+                    viewModel.recordAdClick(ad)
+                    openAd(context, ad)
+                },
             )
 
             AppDestination.DOWNLOADS -> DownloadsScreen(
@@ -204,6 +211,13 @@ fun AllVideoDownloaderApp(
                 },
             )
         }
+    }
+}
+
+private fun openAd(context: Context, ad: MyAppAd) {
+    val uri = runCatching { Uri.parse(ad.urlApp) }.getOrNull() ?: return
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
     }
 }
 
