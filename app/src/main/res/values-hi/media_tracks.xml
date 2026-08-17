@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">ऑडियो ट्रैक</string>
+    <string name="audio_original">मूल</string>
+    <string name="audio_default">डिफ़ॉल्ट</string>
+    <string name="subtitles">उपशीर्षक</string>
+    <string name="subtitle_auto">स्वचालित रूप से बनाया गया</string>
+    <string name="download_subtitle">डाउनलोड</string>
+    <string name="subtitle_download_started">उपशीर्षक डाउनलोड शुरू हुआ।</string>
+    <string name="subtitle_download_failed">उपशीर्षक डाउनलोड नहीं हो सका।</string>
+</resources>
