@@ -1,6 +1,10 @@
 package com.anas_mugally.videodownloader.ui
 
 import android.app.Application
+import android.app.DownloadManager
+import android.content.Context
+import android.net.Uri
+import android.os.Environment
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,6 +43,8 @@ data class MainUiState(
     val selectedKind: DownloadKind = DownloadKind.VIDEO,
     val selectedVideoFormatId: String? = null,
     val selectedAudioFormatId: String? = null,
+    val selectedAudioTrackId: String? = null,
+    val selectedSubtitleId: String? = null,
     val error: String? = null,
 )
 
@@ -78,6 +84,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             media = null,
             selectedVideoFormatId = null,
             selectedAudioFormatId = null,
+            selectedAudioTrackId = null,
+            selectedSubtitleId = null,
             error = null,
         )
     }
@@ -108,12 +116,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .filter { it.hasAudio && !it.hasVideo }
                     .maxByOrNull { it.audioBitrateKbps ?: 0 }
                     ?: media.formats.firstOrNull { it.hasAudio && !it.hasVideo }
+                val preferredTrack = media.audioTracks.firstOrNull { it.id == media.defaultAudioTrackId }
+                    ?: media.audioTracks.firstOrNull { it.isOriginal }
+                    ?: media.audioTracks.firstOrNull { it.isDefault }
+                    ?: media.audioTracks.firstOrNull()
                 _state.value = _state.value.copy(
                     analyzing = false,
                     media = media,
                     selectedKind = if (video != null) DownloadKind.VIDEO else DownloadKind.AUDIO,
                     selectedVideoFormatId = video?.formatId,
                     selectedAudioFormatId = audio?.formatId,
+                    selectedAudioTrackId = preferredTrack?.id,
+                    selectedSubtitleId = media.subtitles.firstOrNull()?.id,
                 )
                 runCatching { adsRepository.loadNextAd() }
             } catch (error: Throwable) {
@@ -138,6 +152,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun selectAudioTrack(trackId: String) {
+        if (_state.value.media?.audioTracks?.any { it.id == trackId } == true) {
+            _state.value = _state.value.copy(selectedAudioTrackId = trackId)
+        }
+    }
+
+    fun selectSubtitle(subtitleId: String) {
+        if (_state.value.media?.subtitles?.any { it.id == subtitleId } == true) {
+            _state.value = _state.value.copy(selectedSubtitleId = subtitleId)
+        }
+    }
+
+    fun downloadSelectedSubtitle() {
+        val current = _state.value
+        val media = current.media ?: return
+        val subtitleId = current.selectedSubtitleId ?: return
+        val subtitle = media.subtitles.firstOrNull { it.id == subtitleId } ?: return
+        viewModelScope.launch {
+            try {
+                val resolved = api.resolveSubtitle(media.sourceUrl, subtitleId)
+                val safeTitle = media.title
+                    .replace(Regex("[\\/:*?\"<>|]"), "_")
+                    .trim()
+                    .take(90)
+                    .ifBlank { "subtitle" }
+                val language = resolved.language?.takeIf(String::isNotBlank) ?: subtitle.language ?: "sub"
+                val ext = resolved.extension.lowercase().filter(Char::isLetterOrDigit).ifBlank { "vtt" }
+                val request = DownloadManager.Request(Uri.parse(resolved.stream.url)).apply {
+                    setTitle(app.getString(R.string.subtitles))
+                    setDescription("$safeTitle · $language")
+                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setDestinationInExternalPublicDir(
+                        Environment.DIRECTORY_DOWNLOADS,
+                        "$safeTitle.$language.$ext",
+                    )
+                    resolved.stream.headers.forEach { (name, value) ->
+                        if (name.isNotBlank() && value.isNotBlank() && !name.equals("Cookie", ignoreCase = true)) {
+                            addRequestHeader(name, value)
+                        }
+                    }
+                }
+                val manager = app.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                manager.enqueue(request)
+                _events.emit(UiEvent(R.string.subtitle_download_started))
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                _events.emit(UiEvent(R.string.subtitle_download_failed))
+            }
+        }
+    }
+
     fun recordAdClick(ad: MyAppAd) = adsRepository.recordClick(ad)
 
     fun enqueueSelectedDownload() {
@@ -151,13 +216,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             DownloadKind.VIDEO -> media.formats.firstOrNull { it.formatId == selectedId && it.hasVideo }
             DownloadKind.AUDIO -> media.formats.firstOrNull { it.formatId == selectedId && it.hasAudio && !it.hasVideo }
         } ?: return
+        val selectedTrack = media.audioTracks.firstOrNull { it.id == current.selectedAudioTrackId }
+        val usesSelectableTrack = selectedTrack != null && (format.requiresMerge || current.selectedKind == DownloadKind.AUDIO)
+        val storedFormatId = if (usesSelectableTrack) "$selectedId@@${selectedTrack.id}" else selectedId
 
         viewModelScope.launch {
             val task = enqueueMutex.withLock {
                 val duplicate = repository.tasks.first().any { existing ->
                     (existing.isActive || existing.status == DownloadStatus.PAUSED) &&
                         existing.sourceUrl == media.sourceUrl &&
-                        existing.formatId == selectedId &&
+                        existing.formatId == storedFormatId &&
                         existing.kind == current.selectedKind
                 }
                 if (duplicate) return@withLock null
@@ -169,9 +237,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     sourceUrl = media.sourceUrl,
                     title = media.title,
                     thumbnailUrl = media.thumbnailUrl,
-                    formatId = format.formatId,
+                    formatId = storedFormatId,
                     formatLabel = format.label,
                     formatHasAudio = format.hasAudio,
+                    audioTrackId = if (usesSelectableTrack) selectedTrack?.id else null,
+                    audioTrackLabel = if (usesSelectableTrack) selectedTrack?.label else null,
                     kind = current.selectedKind,
                     fileNameMode = currentSettings.fileNameMode,
                 ).also { repository.upsertTask(it) }
@@ -186,10 +256,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 repository.updateTask(task.id) { saved ->
-                    saved.copy(
-                        status = DownloadStatus.FAILED,
-                        error = error.message?.take(240),
-                    )
+                    saved.copy(status = DownloadStatus.FAILED, error = error.message?.take(240))
                 }
                 _events.emit(UiEvent(R.string.download_failed))
             }
@@ -235,15 +302,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val technical = when (error) {
             is ApiException -> error.code
             else -> error.message
-        }
-            ?.lineSequence()
-            ?.lastOrNull { it.isNotBlank() }
-            ?.trim()
-            ?.take(240)
-        return if (technical.isNullOrBlank()) {
-            app.getString(R.string.analysis_failed)
-        } else {
-            app.getString(R.string.analysis_failed_with_reason, technical)
-        }
+        }?.lineSequence()?.lastOrNull { it.isNotBlank() }?.trim()?.take(240)
+        return if (technical.isNullOrBlank()) app.getString(R.string.analysis_failed)
+        else app.getString(R.string.analysis_failed_with_reason, technical)
     }
 }
