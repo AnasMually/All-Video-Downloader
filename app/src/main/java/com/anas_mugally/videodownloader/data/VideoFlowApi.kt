@@ -179,7 +179,7 @@ class VideoFlowApi {
             val code = connection.responseCode
             val input = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = input?.use { stream ->
-                BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use(BufferedReader::readText)
+                BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use { reader -> reader.readText() }
             }.orEmpty()
             val json = runCatching { JSONObject(text) }.getOrElse {
                 throw ApiException("invalid_api_response")
