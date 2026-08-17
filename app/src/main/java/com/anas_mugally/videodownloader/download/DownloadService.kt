@@ -25,13 +25,17 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -40,15 +44,17 @@ import kotlinx.coroutines.launch
 class DownloadService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val requestedStops = ConcurrentHashMap<String, DownloadStatus>()
+    private val activeConnections = ConcurrentHashMap.newKeySet<HttpURLConnection>()
+
     private lateinit var repository: AppRepository
     private lateinit var api: VideoFlowApi
     private lateinit var notificationManager: NotificationManager
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var downloadWakeLock: PowerManager.WakeLock
     private lateinit var mediaProcessor: OnDeviceMediaProcessor
+
     private var queueJob: Job? = null
     private var currentTaskId: String? = null
-    @Volatile private var currentConnection: HttpURLConnection? = null
     private var foregroundStarted = false
     private var recoveredInterruptedTasks = false
 
@@ -83,7 +89,7 @@ class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        currentConnection?.disconnect()
+        disconnectActiveConnections()
         mediaProcessor.cancelActive()
         if (downloadWakeLock.isHeld) downloadWakeLock.release()
         serviceScope.cancel()
@@ -95,7 +101,7 @@ class DownloadService : Service() {
         val activeId = currentTaskId
         if (activeId != null) {
             requestedStops[activeId] = DownloadStatus.FAILED
-            currentConnection?.disconnect()
+            disconnectActiveConnections()
             mediaProcessor.cancelActive()
             serviceScope.launch {
                 repository.updateTask(activeId) { task ->
@@ -110,7 +116,7 @@ class DownloadService : Service() {
     private fun pauseTask(taskId: String) {
         requestedStops[taskId] = DownloadStatus.PAUSED
         if (currentTaskId == taskId) {
-            currentConnection?.disconnect()
+            disconnectActiveConnections()
             mediaProcessor.cancelActive()
         }
         serviceScope.launch {
@@ -123,7 +129,7 @@ class DownloadService : Service() {
         requestedStops[taskId] = DownloadStatus.CANCELLED
         val wasCurrent = currentTaskId == taskId
         if (wasCurrent) {
-            currentConnection?.disconnect()
+            disconnectActiveConnections()
             mediaProcessor.cancelActive()
         }
         serviceScope.launch {
@@ -202,7 +208,9 @@ class DownloadService : Service() {
         repository.updateTask(task.id) { current ->
             if (current.status == DownloadStatus.QUEUED || current.status == DownloadStatus.WAITING_FOR_WIFI) {
                 current.copy(status = DownloadStatus.QUEUED)
-            } else current
+            } else {
+                current
+            }
         }
         return true
     }
@@ -294,8 +302,7 @@ class DownloadService : Service() {
                 }
             }
         } finally {
-            currentConnection?.disconnect()
-            currentConnection = null
+            disconnectActiveConnections()
             if (downloadWakeLock.isHeld) downloadWakeLock.release()
             currentTaskId = null
         }
@@ -320,7 +327,11 @@ class DownloadService : Service() {
         throw firstError ?: IllegalStateException("Unable to resolve download")
     }
 
-    private suspend fun createFinalMedia(task: DownloadTask, resolved: ResolvedDownload, directory: File): File {
+    private suspend fun createFinalMedia(
+        task: DownloadTask,
+        resolved: ResolvedDownload,
+        directory: File,
+    ): File {
         return when (task.kind) {
             DownloadKind.AUDIO -> {
                 val stream = resolved.stream ?: resolved.audio ?: error("API did not return an audio stream")
@@ -349,7 +360,10 @@ class DownloadService : Service() {
                     throwIfStopRequested(task.id)
                     val audio = downloadStream(task, audioStream, directory, COMPANION_AUDIO_STEM, 72, 88)
                     throwIfStopRequested(task.id)
-                    val muxAudio = if (audioStream.extension.equals("m4a", true) || audioStream.extension.equals("mp4", true)) {
+                    val muxAudio = if (
+                        audioStream.extension.equals("m4a", true) ||
+                        audioStream.extension.equals("mp4", true)
+                    ) {
                         audio
                     } else {
                         updateProgress(task.id, 90)
@@ -366,7 +380,8 @@ class DownloadService : Service() {
                 } else {
                     val stream = resolved.stream ?: error("API did not return a direct video stream")
                     val source = downloadStream(task, stream, directory, SOURCE_VIDEO_STEM, 0, 98)
-                    val extension = stream.extension.lowercase().ifBlank { resolved.extension.lowercase().ifBlank { "mp4" } }
+                    val extension = stream.extension.lowercase()
+                        .ifBlank { resolved.extension.lowercase().ifBlank { "mp4" } }
                     val output = File(directory, DownloadFormatTools.outputFileName(task, extension))
                     moveFile(source, output)
                     updateProgress(task.id, 99)
@@ -386,25 +401,83 @@ class DownloadService : Service() {
     ): File {
         val extension = stream.extension.lowercase().filter(Char::isLetterOrDigit).ifBlank { "bin" }
         val finalFile = File(directory, "$outputStem.$extension")
-        val partial = File(directory, "$outputStem.$extension.part")
-        if (finalFile.isFile && stream.fileSize != null && finalFile.length() == stream.fileSize) return finalFile
+        if (finalFile.isFile && stream.fileSize != null && finalFile.length() == stream.fileSize) {
+            return finalFile
+        }
         if (finalFile.exists()) finalFile.delete()
 
+        val rangeSupport = probeRangeSupport(stream)
+        if (rangeSupport != null && rangeSupport.totalBytes >= MIN_PARALLEL_DOWNLOAD_BYTES) {
+            val segments = parallelSegmentCount(rangeSupport.totalBytes)
+            if (segments > 1) {
+                return try {
+                    downloadStreamParallel(
+                        task = task,
+                        stream = stream,
+                        directory = directory,
+                        outputStem = outputStem,
+                        extension = extension,
+                        finalFile = finalFile,
+                        total = rangeSupport.totalBytes,
+                        segmentCount = segments,
+                        progressStart = progressStart,
+                        progressEnd = progressEnd,
+                    )
+                } catch (error: RangeDownloadUnsupportedException) {
+                    deleteSegmentParts(directory, outputStem, extension)
+                    downloadStreamSingle(
+                        task = task,
+                        stream = stream,
+                        finalFile = finalFile,
+                        partial = File(directory, "$outputStem.$extension.part"),
+                        progressStart = progressStart,
+                        progressEnd = progressEnd,
+                    )
+                }
+            }
+        }
+
+        return downloadStreamSingle(
+            task = task,
+            stream = stream,
+            finalFile = finalFile,
+            partial = File(directory, "$outputStem.$extension.part"),
+            progressStart = progressStart,
+            progressEnd = progressEnd,
+        )
+    }
+
+    private suspend fun downloadStreamSingle(
+        task: DownloadTask,
+        stream: MediaStream,
+        finalFile: File,
+        partial: File,
+        progressStart: Int,
+        progressEnd: Int,
+    ): File {
         var existing = partial.length().coerceAtLeast(0L)
-        var connection = openStreamConnection(stream, existing)
+        var connection = openStreamConnection(
+            stream = stream,
+            rangeStart = existing.takeIf { it > 0L },
+        )
+        registerConnection(connection)
         var code = connection.responseCode
+
         if (existing > 0L && code == HttpURLConnection.HTTP_OK) {
+            unregisterConnection(connection)
             connection.disconnect()
             partial.delete()
             existing = 0L
-            connection = openStreamConnection(stream, 0L)
+            connection = openStreamConnection(stream = stream)
+            registerConnection(connection)
             code = connection.responseCode
         }
+
         if (code !in listOf(HttpURLConnection.HTTP_OK, HttpURLConnection.HTTP_PARTIAL)) {
+            unregisterConnection(connection)
             connection.disconnect()
             error("HTTP $code while downloading media")
         }
-        currentConnection = connection
 
         val contentLength = connection.contentLengthLong.takeIf { it > 0L }
         val total = when {
@@ -417,11 +490,12 @@ class DownloadService : Service() {
         var lastBytes = downloaded
         var lastAt = System.currentTimeMillis()
         var lastUiAt = 0L
+        var smoothedSpeed = 0L
 
         try {
-            connection.inputStream.buffered().use { input ->
-                FileOutputStream(partial, append).buffered().use { output ->
-                    val buffer = ByteArray(128 * 1024)
+            connection.inputStream.buffered(NETWORK_BUFFER_BYTES).use { input ->
+                FileOutputStream(partial, append).buffered(NETWORK_BUFFER_BYTES).use { output ->
+                    val buffer = ByteArray(NETWORK_BUFFER_BYTES)
                     while (true) {
                         throwIfStopRequested(task.id)
                         val count = input.read(buffer)
@@ -431,50 +505,318 @@ class DownloadService : Service() {
                         val now = System.currentTimeMillis()
                         if (now - lastUiAt >= PROGRESS_UPDATE_INTERVAL_MS) {
                             val elapsed = (now - lastAt).coerceAtLeast(1L)
-                            val speed = ((downloaded - lastBytes) * 1000L / elapsed).coerceAtLeast(0L)
+                            val instantSpeed = ((downloaded - lastBytes) * 1000L / elapsed).coerceAtLeast(0L)
+                            smoothedSpeed = smoothSpeed(smoothedSpeed, instantSpeed)
                             lastAt = now
                             lastBytes = downloaded
                             lastUiAt = now
-                            val localPercent = if (total != null && total > 0L) {
-                                ((downloaded * 100.0) / total).roundToInt().coerceIn(0, 100)
-                            } else 0
-                            val percent = progressStart +
-                                ((progressEnd - progressStart) * localPercent / 100f).roundToInt()
-                            val eta = if (total != null && speed > 0L) ((total - downloaded).coerceAtLeast(0L) / speed) else null
-                            updateProgress(task.id, percent, downloaded, total, speed, eta)
+                            publishStreamProgress(
+                                taskId = task.id,
+                                downloaded = downloaded,
+                                total = total,
+                                speed = smoothedSpeed,
+                                progressStart = progressStart,
+                                progressEnd = progressEnd,
+                            )
                         }
                     }
                     output.flush()
                 }
             }
         } finally {
+            unregisterConnection(connection)
             connection.disconnect()
-            if (currentConnection === connection) currentConnection = null
         }
+
         throwIfStopRequested(task.id)
-        if (total != null && partial.length() < total) error("Media download ended before all bytes were received")
+        if (total != null && partial.length() < total) {
+            error("Media download ended before all bytes were received")
+        }
         if (!partial.renameTo(finalFile)) {
             partial.copyTo(finalFile, overwrite = true)
             partial.delete()
         }
-        updateProgress(task.id, progressEnd, finalFile.length(), total ?: finalFile.length(), 0L, 0L)
+        updateProgress(
+            task.id,
+            progressEnd,
+            finalFile.length(),
+            total ?: finalFile.length(),
+            0L,
+            0L,
+        )
         return finalFile
     }
 
-    private fun openStreamConnection(stream: MediaStream, existingBytes: Long): HttpURLConnection {
+    private suspend fun downloadStreamParallel(
+        task: DownloadTask,
+        stream: MediaStream,
+        directory: File,
+        outputStem: String,
+        extension: String,
+        finalFile: File,
+        total: Long,
+        segmentCount: Int,
+        progressStart: Int,
+        progressEnd: Int,
+    ): File = coroutineScope {
+        val segmentSize = (total + segmentCount - 1L) / segmentCount
+        val segments = (0 until segmentCount).mapNotNull { index ->
+            val start = index * segmentSize
+            if (start >= total) {
+                null
+            } else {
+                val end = minOf(total - 1L, start + segmentSize - 1L)
+                val file = File(directory, "$outputStem.$extension.segment-$index.part")
+                Segment(index = index, start = start, end = end, file = file)
+            }
+        }
+
+        val existingBytes = segments.sumOf { segment ->
+            val expected = segment.length
+            val currentLength = segment.file.length()
+            when {
+                currentLength == expected -> expected
+                currentLength > 0L && currentLength < expected -> currentLength
+                else -> {
+                    if (segment.file.exists()) segment.file.delete()
+                    0L
+                }
+            }
+        }
+        val downloadedBytes = AtomicLong(existingBytes)
+        var monitorSpeed = 0L
+
+        val downloads = segments.map { segment ->
+            async(Dispatchers.IO) {
+                downloadSegment(task, stream, segment, downloadedBytes)
+            }
+        }
+
+        val monitor = launch(Dispatchers.IO) {
+            var lastBytes = downloadedBytes.get()
+            var lastAt = System.currentTimeMillis()
+            while (isActive) {
+                delay(PROGRESS_UPDATE_INTERVAL_MS)
+                val now = System.currentTimeMillis()
+                val current = downloadedBytes.get()
+                val elapsed = (now - lastAt).coerceAtLeast(1L)
+                val instantSpeed = ((current - lastBytes) * 1000L / elapsed).coerceAtLeast(0L)
+                monitorSpeed = smoothSpeed(monitorSpeed, instantSpeed)
+                lastBytes = current
+                lastAt = now
+                publishStreamProgress(
+                    taskId = task.id,
+                    downloaded = current,
+                    total = total,
+                    speed = monitorSpeed,
+                    progressStart = progressStart,
+                    progressEnd = progressEnd,
+                )
+            }
+        }
+
+        try {
+            downloads.awaitAll()
+        } finally {
+            monitor.cancel()
+        }
+
+        throwIfStopRequested(task.id)
+        segments.forEach { segment ->
+            if (segment.file.length() != segment.length) {
+                error("Parallel media segment ${segment.index} ended before all bytes were received")
+            }
+        }
+
+        FileOutputStream(finalFile, false).buffered(NETWORK_BUFFER_BYTES).use { output ->
+            segments.sortedBy(Segment::index).forEach { segment ->
+                segment.file.inputStream().buffered(NETWORK_BUFFER_BYTES).use { input ->
+                    input.copyTo(output, NETWORK_BUFFER_BYTES)
+                }
+            }
+            output.flush()
+        }
+        if (finalFile.length() != total) {
+            finalFile.delete()
+            error("Parallel media download size mismatch")
+        }
+
+        segments.forEach { it.file.delete() }
+        File(directory, "$outputStem.$extension.part").delete()
+        updateProgress(task.id, progressEnd, total, total, 0L, 0L)
+        finalFile
+    }
+
+    private fun downloadSegment(
+        task: DownloadTask,
+        stream: MediaStream,
+        segment: Segment,
+        downloadedBytes: AtomicLong,
+    ) {
+        val expectedLength = segment.length
+        var existing = segment.file.length()
+        if (existing == expectedLength) return
+        if (existing < 0L || existing > expectedLength) {
+            segment.file.delete()
+            existing = 0L
+        }
+
+        val requestStart = segment.start + existing
+        val connection = openStreamConnection(
+            stream = stream,
+            rangeStart = requestStart,
+            rangeEnd = segment.end,
+        )
+        registerConnection(connection)
+
+        try {
+            val code = connection.responseCode
+            if (code == HttpURLConnection.HTTP_OK) {
+                throw RangeDownloadUnsupportedException()
+            }
+            if (code != HttpURLConnection.HTTP_PARTIAL) {
+                error("HTTP $code while downloading media segment")
+            }
+
+            var remaining = expectedLength - existing
+            connection.inputStream.buffered(NETWORK_BUFFER_BYTES).use { input ->
+                FileOutputStream(segment.file, true).buffered(NETWORK_BUFFER_BYTES).use { output ->
+                    val buffer = ByteArray(NETWORK_BUFFER_BYTES)
+                    while (remaining > 0L) {
+                        throwIfStopRequested(task.id)
+                        val maxRead = minOf(buffer.size.toLong(), remaining).toInt()
+                        val count = input.read(buffer, 0, maxRead)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                        remaining -= count
+                        downloadedBytes.addAndGet(count.toLong())
+                    }
+                    output.flush()
+                }
+            }
+            if (segment.file.length() != expectedLength) {
+                error("Media segment ended before all bytes were received")
+            }
+        } finally {
+            unregisterConnection(connection)
+            connection.disconnect()
+        }
+    }
+
+    private fun probeRangeSupport(stream: MediaStream): RangeSupport? {
+        val connection = openStreamConnection(stream, rangeStart = 0L, rangeEnd = 0L)
+        registerConnection(connection)
+        return try {
+            if (connection.responseCode != HttpURLConnection.HTTP_PARTIAL) return null
+            val contentRange = connection.getHeaderField("Content-Range") ?: return null
+            val total = contentRange.substringAfterLast('/').trim().toLongOrNull() ?: return null
+            if (total <= 1L) return null
+
+            runCatching {
+                connection.inputStream.use { input ->
+                    val probe = ByteArray(1)
+                    input.read(probe)
+                }
+            }
+            RangeSupport(total)
+        } catch (_: Throwable) {
+            null
+        } finally {
+            unregisterConnection(connection)
+            connection.disconnect()
+        }
+    }
+
+    private fun openStreamConnection(
+        stream: MediaStream,
+        rangeStart: Long? = null,
+        rangeEnd: Long? = null,
+    ): HttpURLConnection {
         return (URL(stream.url).openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = true
             connectTimeout = 20_000
-            readTimeout = 30_000
+            readTimeout = 45_000
             useCaches = false
             setRequestProperty("Accept-Encoding", "identity")
+            setRequestProperty("Connection", "Keep-Alive")
             stream.headers.forEach { (name, value) ->
                 if (name.isBlank() || value.isBlank()) return@forEach
-                if (name.equals("Host", true) || name.equals("Content-Length", true) || name.equals("Range", true)) return@forEach
+                if (
+                    name.equals("Host", true) ||
+                    name.equals("Content-Length", true) ||
+                    name.equals("Range", true) ||
+                    name.equals("Accept-Encoding", true)
+                ) {
+                    return@forEach
+                }
                 setRequestProperty(name, value)
             }
-            if (existingBytes > 0L) setRequestProperty("Range", "bytes=$existingBytes-")
+            if (rangeStart != null) {
+                val suffix = rangeEnd?.let { "-$it" } ?: "-"
+                setRequestProperty("Range", "bytes=$rangeStart$suffix")
+            }
         }
+    }
+
+    private suspend fun publishStreamProgress(
+        taskId: String,
+        downloaded: Long,
+        total: Long?,
+        speed: Long,
+        progressStart: Int,
+        progressEnd: Int,
+    ) {
+        val localPercent = if (total != null && total > 0L) {
+            ((downloaded * 100.0) / total).roundToInt().coerceIn(0, 100)
+        } else {
+            0
+        }
+        val percent = progressStart +
+            ((progressEnd - progressStart) * localPercent / 100f).roundToInt()
+        val eta = if (total != null && speed > 0L) {
+            ((total - downloaded).coerceAtLeast(0L) / speed)
+        } else {
+            null
+        }
+        updateProgress(taskId, percent, downloaded, total, speed, eta)
+    }
+
+    private fun smoothSpeed(previous: Long, current: Long): Long {
+        if (previous <= 0L) return current
+        if (current <= 0L) return previous
+        return ((previous * 7L) + (current * 3L)) / 10L
+    }
+
+    private fun parallelSegmentCount(totalBytes: Long): Int {
+        val bySize = ((totalBytes + MIN_SEGMENT_BYTES - 1L) / MIN_SEGMENT_BYTES)
+            .coerceAtLeast(1L)
+            .coerceAtMost(MAX_PARALLEL_SEGMENTS.toLong())
+            .toInt()
+        return bySize.coerceAtLeast(1)
+    }
+
+    private fun deleteSegmentParts(directory: File, outputStem: String, extension: String) {
+        directory.listFiles()
+            ?.filter { file ->
+                file.name.startsWith("$outputStem.$extension.segment-") &&
+                    file.name.endsWith(".part")
+            }
+            ?.forEach(File::delete)
+    }
+
+    private fun registerConnection(connection: HttpURLConnection) {
+        activeConnections.add(connection)
+    }
+
+    private fun unregisterConnection(connection: HttpURLConnection) {
+        activeConnections.remove(connection)
+    }
+
+    private fun disconnectActiveConnections() {
+        activeConnections.toList().forEach { connection ->
+            runCatching { connection.disconnect() }
+        }
+        activeConnections.clear()
     }
 
     private suspend fun updateProgress(
@@ -494,9 +836,13 @@ class DownloadService : Service() {
                     speedBytesPerSecond = speedBytesPerSecond ?: task.speedBytesPerSecond,
                     etaSeconds = etaSeconds ?: task.etaSeconds,
                 )
-            } else task
+            } else {
+                task
+            }
         }
-        repository.task(taskId)?.takeIf { it.status == DownloadStatus.DOWNLOADING }?.let(::showActiveNotification)
+        repository.task(taskId)
+            ?.takeIf { it.status == DownloadStatus.DOWNLOADING }
+            ?.let(::showActiveNotification)
     }
 
     private fun throwIfStopRequested(taskId: String) {
@@ -551,6 +897,20 @@ class DownloadService : Service() {
         }
     }
 
+    private data class RangeSupport(val totalBytes: Long)
+
+    private data class Segment(
+        val index: Int,
+        val start: Long,
+        val end: Long,
+        val file: File,
+    ) {
+        val length: Long
+            get() = end - start + 1L
+    }
+
+    private class RangeDownloadUnsupportedException : IllegalStateException()
+
     companion object {
         const val ACTION_ENQUEUE = "com.anas_mugally.videodownloader.action.ENQUEUE"
         const val ACTION_PAUSE = "com.anas_mugally.videodownloader.action.PAUSE"
@@ -558,13 +918,20 @@ class DownloadService : Service() {
         const val ACTION_RETRY = "com.anas_mugally.videodownloader.action.RETRY"
         const val ACTION_CANCEL = "com.anas_mugally.videodownloader.action.CANCEL"
         const val EXTRA_TASK_ID = "task_id"
+
         private const val SOURCE_AUDIO_STEM = "source-audio"
         private const val SOURCE_VIDEO_STEM = "source-video"
         private const val COMPANION_AUDIO_STEM = "companion-audio-source"
         private const val NORMALIZED_AUDIO_STEM = "companion-audio"
+
         private const val PROGRESS_UPDATE_INTERVAL_MS = 600L
         private const val NETWORK_POLL_INTERVAL_MS = 3_000L
         private const val DOWNLOAD_WAKE_LOCK_TIMEOUT_MS = 6L * 60L * 60L * 1_000L
         private const val MAX_ERROR_LENGTH = 500
+
+        private const val MAX_PARALLEL_SEGMENTS = 4
+        private const val MIN_SEGMENT_BYTES = 512L * 1024L
+        private const val MIN_PARALLEL_DOWNLOAD_BYTES = 768L * 1024L
+        private const val NETWORK_BUFFER_BYTES = 512 * 1024
     }
 }
