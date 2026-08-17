@@ -399,6 +399,27 @@ class DownloadService : Service() {
         progressStart: Int,
         progressEnd: Int,
     ): File {
+        if (stream.isAdaptiveManifest) {
+            val adaptiveFile = File(directory, "$outputStem.mp4")
+            if (adaptiveFile.isFile && adaptiveFile.length() > 0L) return adaptiveFile
+            if (adaptiveFile.exists()) adaptiveFile.delete()
+            updateProgress(task.id, progressStart)
+            mediaProcessor.materializeAdaptiveStream(stream, adaptiveFile)
+            throwIfStopRequested(task.id)
+            require(adaptiveFile.isFile && adaptiveFile.length() > 0L) {
+                "Adaptive media export produced an empty file"
+            }
+            updateProgress(
+                task.id,
+                progressEnd,
+                adaptiveFile.length(),
+                adaptiveFile.length(),
+                0L,
+                0L,
+            )
+            return adaptiveFile
+        }
+
         val extension = stream.extension.lowercase().filter(Char::isLetterOrDigit).ifBlank { "bin" }
         val finalFile = File(directory, "$outputStem.$extension")
         if (finalFile.isFile && stream.fileSize != null && finalFile.length() == stream.fileSize) {
