@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.anas_mugally.videodownloader.R
 import com.anas_mugally.videodownloader.VideoDownloaderApp
 import com.anas_mugally.videodownloader.data.ApiException
+import com.anas_mugally.videodownloader.data.MyAppAd
 import com.anas_mugally.videodownloader.domain.AppSettings
 import com.anas_mugally.videodownloader.domain.DownloadKind
 import com.anas_mugally.videodownloader.domain.DownloadStatus
@@ -47,6 +48,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as VideoDownloaderApp
     private val repository = app.repository
     private val api = app.api
+    private val adsRepository = app.adsRepository
     private val _state = MutableStateFlow(MainUiState())
     private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 8)
     private var analysisJob: Job? = null
@@ -54,6 +56,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val state = _state.asStateFlow()
     val events = _events.asSharedFlow()
+    val currentAd = adsRepository.currentAd
     val settings = repository.settings.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -68,6 +71,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setUrl(value: String) {
         analysisJob?.cancel()
+        adsRepository.clearCurrent()
         _state.value = _state.value.copy(
             url = value,
             analyzing = false,
@@ -90,6 +94,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         analysisJob = viewModelScope.launch {
+            adsRepository.clearCurrent()
             _state.value = _state.value.copy(
                 url = url,
                 analyzing = true,
@@ -110,6 +115,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     selectedVideoFormatId = video?.formatId,
                     selectedAudioFormatId = audio?.formatId,
                 )
+                runCatching { adsRepository.loadNextAd() }
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 _state.value = _state.value.copy(
@@ -131,6 +137,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             DownloadKind.AUDIO -> _state.value.copy(selectedAudioFormatId = formatId)
         }
     }
+
+    fun recordAdClick(ad: MyAppAd) = adsRepository.recordClick(ad)
 
     fun enqueueSelectedDownload() {
         val current = _state.value
