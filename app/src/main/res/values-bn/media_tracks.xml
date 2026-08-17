@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">অডিও ট্র্যাক</string>
+    <string name="audio_original">মূল</string>
+    <string name="audio_default">ডিফল্ট</string>
+    <string name="subtitles">সাবটাইটেল</string>
+    <string name="subtitle_auto">স্বয়ংক্রিয়ভাবে তৈরি</string>
+    <string name="download_subtitle">ডাউনলোড</string>
+    <string name="subtitle_download_started">সাবটাইটেল ডাউনলোড শুরু হয়েছে।</string>
+    <string name="subtitle_download_failed">সাবটাইটেল ডাউনলোড করা যায়নি।</string>
+</resources>
