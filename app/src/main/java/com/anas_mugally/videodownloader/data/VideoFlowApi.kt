@@ -166,8 +166,15 @@ class VideoFlowApi {
         downloadId: String,
         audioTrackId: String? = null,
     ): ResolvedDownload = withContext(Dispatchers.IO) {
-        val body = JSONObject().put("url", sourceUrl).put("download_id", downloadId)
-        if (!audioTrackId.isNullOrBlank()) body.put("audio_track_id", audioTrackId)
+        // Download tasks persist the selected track together with the quality in one
+        // backward-compatible string. The service can keep using its existing two-arg
+        // resolve call while newer tasks recover the exact selected/original track.
+        val encoded = downloadId.split("@@", limit = 2)
+        val actualDownloadId = encoded.first()
+        val actualAudioTrackId = audioTrackId?.takeIf(String::isNotBlank)
+            ?: encoded.getOrNull(1)?.takeIf(String::isNotBlank)
+        val body = JSONObject().put("url", sourceUrl).put("download_id", actualDownloadId)
+        if (actualAudioTrackId != null) body.put("audio_track_id", actualAudioTrackId)
         val root = requestJson("resolve.php", body = body)
         parseDownload(root.getJSONObject("download"))
     }
