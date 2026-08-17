@@ -150,31 +150,34 @@ class MyAppAdsRepository(private val context: Context) {
         }
     }
 
-    private fun decodeFirestoreValue(value: JSONObject): Any? = when {
-        value.has("stringValue") -> value.optString("stringValue")
-        value.has("integerValue") -> value.optString("integerValue").toLongOrNull() ?: 0L
-        value.has("doubleValue") -> value.optDouble("doubleValue")
-        value.has("booleanValue") -> value.optBoolean("booleanValue")
-        value.has("nullValue") -> null
-        value.has("mapValue") -> {
-            val fields = value.optJSONObject("mapValue")?.optJSONObject("fields") ?: return emptyMap<String, Any?>()
-            buildMap {
-                val keys = fields.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    put(key, fields.optJSONObject(key)?.let(::decodeFirestoreValue))
+    private fun decodeFirestoreValue(value: JSONObject): Any? {
+        return when {
+            value.has("stringValue") -> value.optString("stringValue")
+            value.has("integerValue") -> value.optString("integerValue").toLongOrNull() ?: 0L
+            value.has("doubleValue") -> value.optDouble("doubleValue")
+            value.has("booleanValue") -> value.optBoolean("booleanValue")
+            value.has("nullValue") -> null
+            value.has("mapValue") -> {
+                val fields = value.optJSONObject("mapValue")?.optJSONObject("fields")
+                    ?: return emptyMap<String, Any?>()
+                buildMap {
+                    val keys = fields.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        put(key, fields.optJSONObject(key)?.let(::decodeFirestoreValue))
+                    }
                 }
             }
-        }
-        value.has("arrayValue") -> {
-            val values = value.optJSONObject("arrayValue")?.optJSONArray("values") ?: JSONArray()
-            buildList {
-                for (index in 0 until values.length()) {
-                    add(values.optJSONObject(index)?.let(::decodeFirestoreValue))
+            value.has("arrayValue") -> {
+                val values = value.optJSONObject("arrayValue")?.optJSONArray("values") ?: JSONArray()
+                buildList {
+                    for (index in 0 until values.length()) {
+                        add(values.optJSONObject(index)?.let(::decodeFirestoreValue))
+                    }
                 }
             }
+            else -> null
         }
-        else -> null
     }
 
     private fun encodeAds(ads: List<MyAppAd>): String = JSONArray().apply {
