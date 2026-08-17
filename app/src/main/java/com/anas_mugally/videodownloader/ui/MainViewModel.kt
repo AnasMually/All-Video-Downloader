@@ -217,8 +217,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             DownloadKind.AUDIO -> media.formats.firstOrNull { it.formatId == selectedId && it.hasAudio && !it.hasVideo }
         } ?: return
         val selectedTrack = media.audioTracks.firstOrNull { it.id == current.selectedAudioTrackId }
-        val usesSelectableTrack = selectedTrack != null && (format.requiresMerge || current.selectedKind == DownloadKind.AUDIO)
-        val storedFormatId = if (usesSelectableTrack) "$selectedId@@${selectedTrack.id}" else selectedId
+        val selectedTrackId = selectedTrack?.id
+        val usesSelectableTrack = selectedTrackId != null &&
+            (format.requiresMerge || current.selectedKind == DownloadKind.AUDIO)
+        val storedFormatId = if (usesSelectableTrack) "$selectedId@@$selectedTrackId" else selectedId
 
         viewModelScope.launch {
             val task = enqueueMutex.withLock {
@@ -240,7 +242,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     formatId = storedFormatId,
                     formatLabel = format.label,
                     formatHasAudio = format.hasAudio,
-                    audioTrackId = if (usesSelectableTrack) selectedTrack?.id else null,
+                    audioTrackId = if (usesSelectableTrack) selectedTrackId else null,
                     audioTrackLabel = if (usesSelectableTrack) selectedTrack?.label else null,
                     kind = current.selectedKind,
                     fileNameMode = currentSettings.fileNameMode,
