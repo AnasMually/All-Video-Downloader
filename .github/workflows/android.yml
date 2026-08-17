@@ -22,24 +22,10 @@ jobs:
         uses: gradle/actions/wrapper-validation@v4
       - name: Build, test and lint
         run: ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
-      - name: Verify 16 KB native-library alignment
-        run: bash scripts/check-elf-alignment.sh app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
-      - name: Verify embedded Python architectures
-        run: |
-          bash scripts/check-python-runtime-abi.sh app/build/outputs/apk/debug/app-arm64-v8a-debug.apk arm64-v8a ELF64 AArch64
-          bash scripts/check-python-runtime-abi.sh app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk armeabi-v7a ELF32 ARM
-      - name: Verify heavy media binaries are absent
-        run: |
-          for apk in app/build/outputs/apk/debug/*.apk; do
-            bash scripts/check-no-heavy-media-binaries.sh "$apk"
-          done
-      - name: Upload ARM64 debug APK
+      - name: Verify heavy media/runtime binaries are absent
+        run: bash scripts/check-no-heavy-media-binaries.sh app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: all-video-downloader-arm64-debug
-          path: app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
-      - name: Upload ARMv7 debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-video-downloader-armv7-debug
-          path: app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+          name: all-video-downloader-api-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
