@@ -200,6 +200,18 @@ class OnDeviceMediaProcessor(context: Context) {
 
             videoExtractor.selectTrack(videoTrack)
             audioExtractor.selectTrack(audioTrack)
+
+            // Separate Facebook/DASH representations can carry non-zero timeline
+            // origins. Writing those absolute timestamps into a fresh MP4 can put
+            // the audio far outside the visible video timeline, producing a file
+            // that technically contains an audio track but plays silently. Treat
+            // each downloaded representation as a standalone clip and rebase its
+            // first sample to t=0 before interleaving the tracks.
+            val videoStartTimeUs = videoExtractor.sampleTime
+            val audioStartTimeUs = audioExtractor.sampleTime
+            require(videoStartTimeUs >= 0L) { "Downloaded video contains no media samples" }
+            require(audioStartTimeUs >= 0L) { "Downloaded audio contains no media samples" }
+
             val mediaMuxer = MediaMuxer(output.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             muxer = mediaMuxer
             videoFormat.integerOrNull(MediaFormat.KEY_ROTATION)?.let(mediaMuxer::setOrientationHint)
@@ -217,18 +229,33 @@ class OnDeviceMediaProcessor(context: Context) {
             val info = MediaCodec.BufferInfo()
             var videoDone = false
             var audioDone = false
+            var videoSamplesWritten = 0L
+            var audioSamplesWritten = 0L
 
             while (!videoDone || !audioDone) {
                 if (shouldStop()) throw MediaProcessingStoppedException()
-                val videoTime = if (videoDone) Long.MAX_VALUE else videoExtractor.sampleTime
-                val audioTime = if (audioDone) Long.MAX_VALUE else audioExtractor.sampleTime
-                if (videoTime < 0L) videoDone = true
-                if (audioTime < 0L) audioDone = true
+
+                val rawVideoTime = if (videoDone) -1L else videoExtractor.sampleTime
+                val rawAudioTime = if (audioDone) -1L else audioExtractor.sampleTime
+                if (rawVideoTime < 0L) videoDone = true
+                if (rawAudioTime < 0L) audioDone = true
                 if (videoDone && audioDone) break
+
+                val videoTime = if (videoDone) {
+                    Long.MAX_VALUE
+                } else {
+                    (rawVideoTime - videoStartTimeUs).coerceAtLeast(0L)
+                }
+                val audioTime = if (audioDone) {
+                    Long.MAX_VALUE
+                } else {
+                    (rawAudioTime - audioStartTimeUs).coerceAtLeast(0L)
+                }
 
                 val useVideo = !videoDone && (audioDone || videoTime <= audioTime)
                 val extractor = if (useVideo) videoExtractor else audioExtractor
                 val outputTrack = if (useVideo) outputVideoTrack else outputAudioTrack
+                val startTimeUs = if (useVideo) videoStartTimeUs else audioStartTimeUs
                 buffer.clear()
                 val sampleSize = extractor.readSampleData(buffer, 0)
                 if (sampleSize < 0) {
@@ -239,16 +266,20 @@ class OnDeviceMediaProcessor(context: Context) {
                 require(extractorFlags and MediaExtractor.SAMPLE_FLAG_ENCRYPTED == 0) {
                     "Encrypted media samples are not supported"
                 }
+                val presentationTimeUs = (extractor.sampleTime - startTimeUs).coerceAtLeast(0L)
                 info.set(
                     0,
                     sampleSize,
-                    extractor.sampleTime.coerceAtLeast(0L),
+                    presentationTimeUs,
                     extractorFlags.toMediaCodecFlags(),
                 )
                 mediaMuxer.writeSampleData(outputTrack, buffer, info)
+                if (useVideo) videoSamplesWritten++ else audioSamplesWritten++
                 extractor.advance()
             }
 
+            require(videoSamplesWritten > 0L) { "No video samples were written to the final MP4" }
+            require(audioSamplesWritten > 0L) { "No audio samples were written to the final MP4" }
             mediaMuxer.stop()
             muxerStarted = false
             require(output.isFile && output.length() > 0L) { "Android produced an empty MP4 file" }
