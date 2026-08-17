@@ -20,10 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.anas_mugally.videodownloader.R
 import com.anas_mugally.videodownloader.data.MyAppAd
 
 @Composable
@@ -58,7 +60,7 @@ fun MyAppAdCard(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Text(
-                        text = "Ad",
+                        text = stringResource(R.string.ad_label),
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -71,7 +73,7 @@ fun MyAppAdCard(
                 verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 Text(
-                    text = ad.nameApp.ifBlank { "Recommended app" },
+                    text = ad.nameApp.ifBlank { stringResource(R.string.recommended_app) },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -88,7 +90,7 @@ fun MyAppAdCard(
                     onClick = { onClick(ad) },
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Text(ad.btnOpText.ifBlank { "Download app" })
+                    Text(ad.btnOpText.ifBlank { stringResource(R.string.download_app) })
                 }
             }
         }
