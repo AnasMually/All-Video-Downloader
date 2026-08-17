@@ -8,6 +8,9 @@ data class MediaInfo(
     val durationSeconds: Long?,
     val extractor: String,
     val formats: List<MediaFormat>,
+    val audioTracks: List<AudioTrack> = emptyList(),
+    val defaultAudioTrackId: String? = null,
+    val subtitles: List<SubtitleTrack> = emptyList(),
 )
 
 data class MediaFormat(
@@ -21,6 +24,26 @@ data class MediaFormat(
     val fileSize: Long?,
     val hasVideo: Boolean,
     val hasAudio: Boolean,
+    val requiresMerge: Boolean = false,
+)
+
+data class AudioTrack(
+    val id: String,
+    val label: String,
+    val language: String?,
+    val isOriginal: Boolean,
+    val isDefault: Boolean,
+    val extension: String,
+    val bitrateKbps: Int?,
+    val fileSize: Long?,
+)
+
+data class SubtitleTrack(
+    val id: String,
+    val label: String,
+    val language: String?,
+    val extension: String,
+    val automatic: Boolean,
 )
 
 enum class DownloadKind {

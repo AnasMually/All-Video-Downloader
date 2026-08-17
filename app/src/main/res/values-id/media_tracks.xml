@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">Trek audio</string>
+    <string name="audio_original">Asli</string>
+    <string name="audio_default">Bawaan</string>
+    <string name="subtitles">Subtitle</string>
+    <string name="subtitle_auto">Dibuat otomatis</string>
+    <string name="download_subtitle">Unduh</string>
+    <string name="subtitle_download_started">Pengunduhan subtitle dimulai.</string>
+    <string name="subtitle_download_failed">Subtitle tidak dapat diunduh.</string>
+</resources>

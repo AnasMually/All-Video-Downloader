@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">音轨</string>
+    <string name="audio_original">原始</string>
+    <string name="audio_default">默认</string>
+    <string name="subtitles">字幕</string>
+    <string name="subtitle_auto">自动生成</string>
+    <string name="download_subtitle">下载</string>
+    <string name="subtitle_download_started">字幕下载已开始。</string>
+    <string name="subtitle_download_failed">无法下载字幕。</string>
+</resources>

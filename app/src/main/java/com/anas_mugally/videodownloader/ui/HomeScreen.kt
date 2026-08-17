@@ -62,6 +62,9 @@ fun HomeScreen(
     onAnalyze: () -> Unit,
     onKindSelected: (DownloadKind) -> Unit,
     onFormatSelected: (String) -> Unit,
+    onAudioTrackSelected: (String) -> Unit,
+    onSubtitleSelected: (String) -> Unit,
+    onSubtitleDownload: () -> Unit,
     onDownload: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -109,45 +112,30 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.video_link)) },
                 placeholder = { Text(stringResource(R.string.video_link_hint)) },
-                leadingIcon = {
-                    Icon(painterResource(R.drawable.ic_link), contentDescription = null)
-                },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_link), contentDescription = null) },
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(
                             onClick = {
                                 val clipboard = context.getSystemService(ClipboardManager::class.java)
-                                val text = clipboard.primaryClip
-                                    ?.getItemAt(0)
-                                    ?.coerceToText(context)
-                                    ?.toString()
-                                    .orEmpty()
+                                val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
                                 if (text.isNotBlank()) onUrlChange(text)
                             },
                         ) {
-                            Icon(
-                                painterResource(R.drawable.ic_content_paste),
-                                contentDescription = null,
-                            )
+                            Icon(painterResource(R.drawable.ic_content_paste), contentDescription = null)
                             Spacer(Modifier.width(4.dp))
                             Text(stringResource(R.string.paste))
                         }
                         if (state.url.isNotBlank()) {
                             IconButton(onClick = { onUrlChange("") }) {
-                                Icon(
-                                    painterResource(R.drawable.ic_close),
-                                    contentDescription = stringResource(R.string.clear),
-                                )
+                                Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.clear))
                             }
                         }
                     }
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(20.dp),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Uri,
-                    imeAction = ImeAction.Go,
-                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                 keyboardActions = KeyboardActions(onGo = { onAnalyze() }),
             )
         }
@@ -156,9 +144,7 @@ fun HomeScreen(
             Button(
                 onClick = onAnalyze,
                 enabled = !state.analyzing && state.url.isNotBlank(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(18.dp),
             ) {
                 if (state.analyzing) {
@@ -172,27 +158,14 @@ fun HomeScreen(
                     Icon(painterResource(R.drawable.ic_search), contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text(
-                    if (state.analyzing) {
-                        stringResource(R.string.analyzing_link)
-                    } else {
-                        stringResource(R.string.show_qualities)
-                    },
-                )
+                Text(if (state.analyzing) stringResource(R.string.analyzing_link) else stringResource(R.string.show_qualities))
             }
         }
 
         state.error?.let { error ->
             item {
-                OutlinedCard(
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
+                OutlinedCard(colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
                         Icon(
                             painterResource(R.drawable.ic_error),
                             contentDescription = null,
@@ -212,14 +185,9 @@ fun HomeScreen(
                         AsyncImage(
                             model = media.thumbnailUrl,
                             contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
                         )
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = media.title,
                                 maxLines = 2,
@@ -232,10 +200,7 @@ fun HomeScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 if (media.extractor.isNotBlank()) {
-                                    AssistChip(
-                                        onClick = {},
-                                        label = { Text(media.extractor) },
-                                    )
+                                    AssistChip(onClick = {}, label = { Text(media.extractor) })
                                 }
                                 media.durationSeconds?.let {
                                     Text(
@@ -250,35 +215,25 @@ fun HomeScreen(
                 }
             }
 
-            val hasVideo = media.formats.any(MediaFormat::hasVideo)
-            val audioFormats = media.formats
-                .filter { it.hasAudio && !it.hasVideo }
+            val videoFormats = media.formats.filter(MediaFormat::hasVideo)
+            val audioFormats = media.formats.filter { it.hasAudio && !it.hasVideo }
                 .ifEmpty { media.formats.filter(MediaFormat::hasAudio) }
-            val hasAudio = audioFormats.isNotEmpty()
             item {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         selected = state.selectedKind == DownloadKind.VIDEO,
                         onClick = { onKindSelected(DownloadKind.VIDEO) },
-                        enabled = hasVideo,
+                        enabled = videoFormats.isNotEmpty(),
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = {
-                            Icon(painterResource(R.drawable.ic_movie), contentDescription = null)
-                        },
-                    ) {
-                        Text(stringResource(R.string.video))
-                    }
+                        icon = { Icon(painterResource(R.drawable.ic_movie), contentDescription = null) },
+                    ) { Text(stringResource(R.string.video)) }
                     SegmentedButton(
                         selected = state.selectedKind == DownloadKind.AUDIO,
                         onClick = { onKindSelected(DownloadKind.AUDIO) },
-                        enabled = hasAudio,
+                        enabled = audioFormats.isNotEmpty(),
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = {
-                            Icon(painterResource(R.drawable.ic_headphones), contentDescription = null)
-                        },
-                    ) {
-                        Text(stringResource(R.string.audio))
-                    }
+                        icon = { Icon(painterResource(R.drawable.ic_headphones), contentDescription = null) },
+                    ) { Text(stringResource(R.string.audio)) }
                 }
             }
 
@@ -290,16 +245,8 @@ fun HomeScreen(
                 )
             }
 
-            val shownFormats = if (state.selectedKind == DownloadKind.AUDIO) {
-                audioFormats
-            } else {
-                media.formats.filter(MediaFormat::hasVideo)
-            }
-            val selectedId = if (state.selectedKind == DownloadKind.AUDIO) {
-                state.selectedAudioFormatId
-            } else {
-                state.selectedVideoFormatId
-            }
+            val shownFormats = if (state.selectedKind == DownloadKind.AUDIO) audioFormats else videoFormats
+            val selectedId = if (state.selectedKind == DownloadKind.AUDIO) state.selectedAudioFormatId else state.selectedVideoFormatId
             items(shownFormats, key = MediaFormat::formatId) { format ->
                 FormatChoiceCard(
                     format = format,
@@ -307,6 +254,32 @@ fun HomeScreen(
                     selected = selectedId == format.formatId,
                     onClick = { onFormatSelected(format.formatId) },
                 )
+            }
+
+            val selectedFormat = shownFormats.firstOrNull { it.formatId == selectedId }
+            val shouldChooseAudioTrack = media.audioTracks.isNotEmpty() &&
+                (state.selectedKind == DownloadKind.AUDIO || selectedFormat?.requiresMerge == true)
+            if (shouldChooseAudioTrack) {
+                item {
+                    AudioTrackSelector(
+                        tracks = media.audioTracks,
+                        selectedId = state.selectedAudioTrackId,
+                        onSelected = onAudioTrackSelected,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            if (media.subtitles.isNotEmpty()) {
+                item {
+                    SubtitleSelector(
+                        tracks = media.subtitles,
+                        selectedId = state.selectedSubtitleId,
+                        onSelected = onSubtitleSelected,
+                        onDownload = onSubtitleDownload,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             if (state.selectedKind == DownloadKind.AUDIO) {
@@ -323,9 +296,7 @@ fun HomeScreen(
                 Button(
                     onClick = onDownload,
                     enabled = selectedId != null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(58.dp),
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
                     shape = RoundedCornerShape(18.dp),
                 ) {
                     Icon(painterResource(R.drawable.ic_download), contentDescription = null)

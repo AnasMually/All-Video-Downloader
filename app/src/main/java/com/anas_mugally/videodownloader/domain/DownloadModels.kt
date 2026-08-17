@@ -9,6 +9,8 @@ data class DownloadTask(
     val formatId: String,
     val formatLabel: String,
     val formatHasAudio: Boolean,
+    val audioTrackId: String? = null,
+    val audioTrackLabel: String? = null,
     val kind: DownloadKind,
     val fileNameMode: FileNameMode,
     val status: DownloadStatus = DownloadStatus.QUEUED,
@@ -25,35 +27,14 @@ data class DownloadTask(
     val error: String? = null,
 ) {
     val isActive: Boolean
-        get() = status == DownloadStatus.QUEUED ||
-            status == DownloadStatus.WAITING_FOR_WIFI ||
-            status == DownloadStatus.DOWNLOADING
-
+        get() = status == DownloadStatus.QUEUED || status == DownloadStatus.WAITING_FOR_WIFI || status == DownloadStatus.DOWNLOADING
     val canRetry: Boolean
         get() = status == DownloadStatus.FAILED || status == DownloadStatus.CANCELLED
 }
 
-enum class DownloadStatus {
-    QUEUED,
-    WAITING_FOR_WIFI,
-    DOWNLOADING,
-    PAUSED,
-    COMPLETED,
-    FAILED,
-    CANCELLED,
-}
-
-enum class ThemeMode {
-    SYSTEM,
-    LIGHT,
-    DARK,
-}
-
-enum class FileNameMode {
-    TITLE,
-    TITLE_AND_ID,
-    MEDIA_ID,
-}
+enum class DownloadStatus { QUEUED, WAITING_FOR_WIFI, DOWNLOADING, PAUSED, COMPLETED, FAILED, CANCELLED }
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class FileNameMode { TITLE, TITLE_AND_ID, MEDIA_ID }
 
 data class AppSettings(
     val wifiOnly: Boolean = false,
@@ -62,7 +43,5 @@ data class AppSettings(
     val outputFolder: String = DEFAULT_OUTPUT_FOLDER,
     val fileNameMode: FileNameMode = FileNameMode.TITLE_AND_ID,
 ) {
-    companion object {
-        const val DEFAULT_OUTPUT_FOLDER = "All Video Downloader"
-    }
+    companion object { const val DEFAULT_OUTPUT_FOLDER = "All Video Downloader" }
 }

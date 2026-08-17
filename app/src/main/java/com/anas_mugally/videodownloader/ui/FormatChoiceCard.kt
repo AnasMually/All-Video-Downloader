@@ -1,6 +1,8 @@
 package com.anas_mugally.videodownloader.ui
 
 import android.text.format.Formatter
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -17,6 +19,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,21 +45,29 @@ fun FormatChoiceCard(
     val size = format.fileSize?.takeIf { it > 0L }
         ?.let { stringResource(R.string.estimated_size_value, Formatter.formatShortFileSize(context, it)) }
         ?: stringResource(R.string.size_unknown_short)
+    val background by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        label = "qualityBackground",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+        label = "qualityBorder",
+    )
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        },
+        color = background,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RadioButton(selected = selected, onClick = onClick)
+            // The whole card owns the click. A second RadioButton click callback caused
+            // competing state updates and left the old card highlighted for a frame/state cycle.
+            RadioButton(selected = selected, onClick = null)
             Spacer(Modifier.width(8.dp))
             Column(
                 modifier = Modifier.weight(1f),

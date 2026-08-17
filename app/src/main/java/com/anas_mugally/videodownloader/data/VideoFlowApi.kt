@@ -1,8 +1,10 @@
 package com.anas_mugally.videodownloader.data
 
 import com.anas_mugally.videodownloader.BuildConfig
+import com.anas_mugally.videodownloader.domain.AudioTrack
 import com.anas_mugally.videodownloader.domain.MediaFormat
 import com.anas_mugally.videodownloader.domain.MediaInfo
+import com.anas_mugally.videodownloader.domain.SubtitleTrack
 import com.anas_mugally.videodownloader.domain.UrlTools
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -40,6 +42,15 @@ data class ResolvedDownload(
     val audio: MediaStream?,
 )
 
+data class ResolvedSubtitle(
+    val id: String,
+    val label: String,
+    val language: String?,
+    val extension: String,
+    val automatic: Boolean,
+    val stream: MediaStream,
+)
+
 class ApiException(val code: String) : IllegalStateException(code)
 
 class VideoFlowApi {
@@ -60,17 +71,12 @@ class VideoFlowApi {
                 )
             }
         }.onSuccess { _state.value = it }
-            .onFailure { error ->
-                _state.value = EngineState(error = error.message ?: "api_unavailable")
-            }
+            .onFailure { error -> _state.value = EngineState(error = error.message ?: "api_unavailable") }
     }
 
     suspend fun extract(rawUrl: String): MediaInfo = withContext(Dispatchers.IO) {
         val url = UrlTools.extractHttpUrl(rawUrl) ?: throw IllegalArgumentException("Invalid web link")
-        val root = requestJson(
-            "extract.php",
-            body = JSONObject().put("url", url),
-        )
+        val root = requestJson("extract.php", body = JSONObject().put("url", url))
         val video = root.getJSONObject("video")
         val downloads = video.optJSONArray("downloads")
         val formats = buildList {
@@ -80,27 +86,67 @@ class VideoFlowApi {
                     val id = item.optString("id").takeIf(String::isNotBlank) ?: continue
                     val kind = item.optString("kind")
                     val requiresMerge = item.optBoolean("requires_merge", false)
-                    val height = item.optInt("height", 0).takeIf { it > 0 }
-                    val fps = item.optDouble("fps", 0.0).takeIf { it > 0 }?.toInt()
-                    val fileSize = item.optLong("filesize", -1L).takeIf { it > 0L }
                     add(
                         MediaFormat(
                             formatId = id,
                             label = item.optString("label", id),
                             extension = item.optString("ext", if (kind == "audio") "m4a" else "mp4"),
-                            height = height,
+                            height = item.optInt("height", 0).takeIf { it > 0 },
                             width = null,
-                            framesPerSecond = fps,
+                            framesPerSecond = item.optDouble("fps", 0.0).takeIf { it > 0 }?.toInt(),
                             audioBitrateKbps = null,
-                            fileSize = fileSize,
+                            fileSize = item.optLong("filesize", -1L).takeIf { it > 0L },
                             hasVideo = kind != "audio",
                             hasAudio = kind == "audio" || !requiresMerge,
+                            requiresMerge = requiresMerge,
                         ),
                     )
                 }
             }
         }
         check(formats.isNotEmpty()) { "No downloadable formats were returned by the API" }
+
+        val audioTracks = buildList {
+            val array = video.optJSONArray("audio_tracks")
+            if (array != null) {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val id = item.optString("id").takeIf(String::isNotBlank) ?: continue
+                    add(
+                        AudioTrack(
+                            id = id,
+                            label = item.optString("label", item.optString("language", "Audio")),
+                            language = item.optString("language").takeIf(String::isNotBlank),
+                            isOriginal = item.optBoolean("is_original", false),
+                            isDefault = item.optBoolean("is_default", false),
+                            extension = item.optString("ext", "m4a"),
+                            bitrateKbps = item.optDouble("bitrate_kbps", 0.0).takeIf { it > 0 }?.toInt(),
+                            fileSize = item.optLong("filesize", -1L).takeIf { it > 0L },
+                        ),
+                    )
+                }
+            }
+        }
+
+        val subtitles = buildList {
+            val array = video.optJSONArray("subtitles")
+            if (array != null) {
+                for (index in 0 until array.length()) {
+                    val item = array.optJSONObject(index) ?: continue
+                    val id = item.optString("id").takeIf(String::isNotBlank) ?: continue
+                    add(
+                        SubtitleTrack(
+                            id = id,
+                            label = item.optString("label", item.optString("language", "Subtitle")),
+                            language = item.optString("language").takeIf(String::isNotBlank),
+                            extension = item.optString("ext", "vtt"),
+                            automatic = item.optBoolean("automatic", false),
+                        ),
+                    )
+                }
+            }
+        }
+
         MediaInfo(
             id = video.optString("id").takeIf(String::isNotBlank),
             sourceUrl = url,
@@ -109,17 +155,46 @@ class VideoFlowApi {
             durationSeconds = video.optLong("duration", 0L).takeIf { it > 0L },
             extractor = root.optString("platform", video.optString("extractor")),
             formats = formats,
+            audioTracks = audioTracks,
+            defaultAudioTrackId = video.optString("default_audio_track_id").takeIf(String::isNotBlank),
+            subtitles = subtitles,
         )
     }
 
-    suspend fun resolve(sourceUrl: String, downloadId: String): ResolvedDownload = withContext(Dispatchers.IO) {
-        val root = requestJson(
-            "resolve.php",
-            body = JSONObject()
-                .put("url", sourceUrl)
-                .put("download_id", downloadId),
-        )
+    suspend fun resolve(
+        sourceUrl: String,
+        downloadId: String,
+        audioTrackId: String? = null,
+    ): ResolvedDownload = withContext(Dispatchers.IO) {
+        // Download tasks persist the selected track together with the quality in one
+        // backward-compatible string. The service can keep using its existing two-arg
+        // resolve call while newer tasks recover the exact selected/original track.
+        val encoded = downloadId.split("@@", limit = 2)
+        val actualDownloadId = encoded.first()
+        val actualAudioTrackId = audioTrackId?.takeIf(String::isNotBlank)
+            ?: encoded.getOrNull(1)?.takeIf(String::isNotBlank)
+        val body = JSONObject().put("url", sourceUrl).put("download_id", actualDownloadId)
+        if (actualAudioTrackId != null) body.put("audio_track_id", actualAudioTrackId)
+        val root = requestJson("resolve.php", body = body)
         parseDownload(root.getJSONObject("download"))
+    }
+
+    suspend fun resolveSubtitle(sourceUrl: String, subtitleId: String): ResolvedSubtitle = withContext(Dispatchers.IO) {
+        val root = requestJson(
+            "subtitle.php",
+            body = JSONObject().put("url", sourceUrl).put("subtitle_id", subtitleId),
+        )
+        val item = root.getJSONObject("subtitle")
+        val stream = item.optJSONObject("stream")?.let(::parseStream)
+            ?: throw ApiException("subtitle_stream_missing")
+        ResolvedSubtitle(
+            id = item.optString("id"),
+            label = item.optString("label"),
+            language = item.optString("language").takeIf(String::isNotBlank),
+            extension = item.optString("ext", stream.extension.ifBlank { "vtt" }),
+            automatic = item.optBoolean("automatic", false),
+            stream = stream,
+        )
     }
 
     private fun parseDownload(item: JSONObject): ResolvedDownload = ResolvedDownload(
@@ -152,11 +227,7 @@ class VideoFlowApi {
         )
     }
 
-    private fun requestJson(
-        endpoint: String,
-        method: String = "POST",
-        body: JSONObject? = null,
-    ): JSONObject {
+    private fun requestJson(endpoint: String, method: String = "POST", body: JSONObject? = null): JSONObject {
         val base = BuildConfig.VIDEOFLOW_API_BASE_URL.trimEnd('/') + "/"
         val connection = (URL(base + endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = method
@@ -164,29 +235,21 @@ class VideoFlowApi {
             readTimeout = 60_000
             useCaches = false
             setRequestProperty("Accept", "application/json")
-            if (BuildConfig.VIDEOFLOW_API_KEY.isNotBlank()) {
-                setRequestProperty("X-API-Key", BuildConfig.VIDEOFLOW_API_KEY)
-            }
+            if (BuildConfig.VIDEOFLOW_API_KEY.isNotBlank()) setRequestProperty("X-API-Key", BuildConfig.VIDEOFLOW_API_KEY)
             if (body != null) {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
             }
         }
         try {
-            if (body != null) {
-                connection.outputStream.bufferedWriter(Charsets.UTF_8).use { it.write(body.toString()) }
-            }
+            if (body != null) connection.outputStream.bufferedWriter(Charsets.UTF_8).use { it.write(body.toString()) }
             val code = connection.responseCode
             val input = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = input?.use { stream ->
                 BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use { reader -> reader.readText() }
             }.orEmpty()
-            val json = runCatching { JSONObject(text) }.getOrElse {
-                throw ApiException("invalid_api_response")
-            }
-            if (code !in 200..299 || !json.optBoolean("ok", false)) {
-                throw ApiException(json.optString("error", "api_request_failed"))
-            }
+            val json = runCatching { JSONObject(text) }.getOrElse { throw ApiException("invalid_api_response") }
+            if (code !in 200..299 || !json.optBoolean("ok", false)) throw ApiException(json.optString("error", "api_request_failed"))
             return json
         } finally {
             connection.disconnect()

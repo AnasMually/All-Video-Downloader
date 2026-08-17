@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_track">Piste audio</string>
+    <string name="audio_original">Originale</string>
+    <string name="audio_default">Par défaut</string>
+    <string name="subtitles">Sous-titres</string>
+    <string name="subtitle_auto">Générés automatiquement</string>
+    <string name="download_subtitle">Télécharger</string>
+    <string name="subtitle_download_started">Téléchargement des sous-titres démarré.</string>
+    <string name="subtitle_download_failed">Impossible de télécharger les sous-titres.</string>
+</resources>
