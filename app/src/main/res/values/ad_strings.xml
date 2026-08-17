@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ad_label">Ad</string>
+    <string name="recommended_app">Recommended app</string>
+    <string name="download_app">Download app</string>
+</resources>

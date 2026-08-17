@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ad_label">إعلان</string>
+    <string name="recommended_app">تطبيق مقترح</string>
+    <string name="download_app">تحميل التطبيق</string>
+</resources>
