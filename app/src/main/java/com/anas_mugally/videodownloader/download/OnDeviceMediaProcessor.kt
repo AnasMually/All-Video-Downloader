@@ -11,12 +11,18 @@ import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultDecoderFactory
 import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.ExoPlayerAssetLoader
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
+import com.anas_mugally.videodownloader.data.MediaStream
 import java.io.File
 import java.nio.ByteBuffer
 import kotlin.coroutines.resume
@@ -37,10 +43,76 @@ class OnDeviceMediaProcessor(context: Context) {
         output.parentFile?.mkdirs()
         if (output.exists()) output.delete()
 
+        exportWithTransformer(
+            transformer = Transformer.Builder(appContext)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC),
+            item = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(source)))
+                .setRemoveVideo(true)
+                .build(),
+            output = output,
+            emptyOutputMessage = "Media3 produced an empty M4A file",
+        )
+    }
+
+    /**
+     * Downloads and remuxes an adaptive HLS/DASH stream entirely on the phone.
+     * Media3 reads the manifest/segments from the source CDN with the yt-dlp
+     * supplied HTTP headers and writes a normal local MP4 track for MediaMuxer.
+     */
+    suspend fun materializeAdaptiveStream(stream: MediaStream, output: File) {
+        require(stream.isAdaptiveManifest) { "The stream is not adaptive media" }
+        output.parentFile?.mkdirs()
+        if (output.exists()) output.delete()
+
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(20_000)
+            .setReadTimeoutMs(60_000)
+            .setAllowCrossProtocolRedirects(true)
+            .setDefaultRequestProperties(stream.headers)
+        val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+        val decoderFactory = DefaultDecoderFactory.Builder(appContext).build()
+        val assetLoaderFactory = ExoPlayerAssetLoader.Factory(
+            appContext,
+            decoderFactory,
+            Clock.DEFAULT,
+            mediaSourceFactory,
+        )
+
+        val protocol = stream.protocol.lowercase()
+        val sourceMime = when {
+            protocol.contains("m3u8") || stream.url.substringBefore('?').lowercase().endsWith(".m3u8") -> MimeTypes.APPLICATION_M3U8
+            protocol.contains("dash") || stream.url.substringBefore('?').lowercase().endsWith(".mpd") -> MimeTypes.APPLICATION_MPD
+            else -> null
+        }
+        val mediaItemBuilder = MediaItem.Builder().setUri(stream.url)
+        if (sourceMime != null) mediaItemBuilder.setMimeType(sourceMime)
+
+        val editedItemBuilder = EditedMediaItem.Builder(mediaItemBuilder.build())
+        if (stream.isVideoOnly) editedItemBuilder.setRemoveAudio(true)
+        if (stream.isAudioOnly) editedItemBuilder.setRemoveVideo(true)
+
+        val transformerBuilder = Transformer.Builder(appContext)
+            .setAssetLoaderFactory(assetLoaderFactory)
+        if (stream.isAudioOnly) transformerBuilder.setAudioMimeType(MimeTypes.AUDIO_AAC)
+
+        exportWithTransformer(
+            transformer = transformerBuilder,
+            item = editedItemBuilder.build(),
+            output = output,
+            emptyOutputMessage = "Media3 produced an empty adaptive media file",
+        )
+    }
+
+    private suspend fun exportWithTransformer(
+        transformer: Transformer.Builder,
+        item: EditedMediaItem,
+        output: File,
+        emptyOutputMessage: String,
+    ) {
         withContext(Dispatchers.Main.immediate) {
             suspendCancellableCoroutine { continuation ->
                 var finished = false
-                lateinit var transformer: Transformer
+                lateinit var builtTransformer: Transformer
 
                 fun clearActive() {
                     if (activeCancellation != null) activeCancellation = null
@@ -54,9 +126,7 @@ class OnDeviceMediaProcessor(context: Context) {
                         if (output.isFile && output.length() > 0L) {
                             continuation.resume(Unit)
                         } else {
-                            continuation.resumeWithException(
-                                IllegalStateException("Media3 produced an empty M4A file"),
-                            )
+                            continuation.resumeWithException(IllegalStateException(emptyOutputMessage))
                         }
                     }
 
@@ -73,15 +143,14 @@ class OnDeviceMediaProcessor(context: Context) {
                     }
                 }
 
-                transformer = Transformer.Builder(appContext)
-                    .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                builtTransformer = transformer
                     .addListener(listener)
                     .build()
 
                 activeCancellation = cancel@{
                     if (finished) return@cancel
                     finished = true
-                    transformer.cancel()
+                    builtTransformer.cancel()
                     clearActive()
                     output.delete()
                     continuation.resumeWithException(MediaProcessingStoppedException())
@@ -90,17 +159,14 @@ class OnDeviceMediaProcessor(context: Context) {
                     mainHandler.post {
                         if (!finished) {
                             finished = true
-                            transformer.cancel()
+                            builtTransformer.cancel()
                             clearActive()
                             output.delete()
                         }
                     }
                 }
 
-                val item = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(source)))
-                    .setRemoveVideo(true)
-                    .build()
-                transformer.start(item, output.absolutePath)
+                builtTransformer.start(item, output.absolutePath)
             }
         }
     }
