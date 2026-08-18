@@ -1,3 +1,4 @@
+# one-time branch patch trigger
 name: Patch Facebook companion audio fix
 
 on:
@@ -82,8 +83,6 @@ jobs:
               raise SystemExit('mux audio block not found')
           text = text.replace(old_merge, new_merge, 1)
 
-          # Repair the pre-existing suspicious indentation around the merge path so
-          # lint can validate the actual fix instead of failing before analysis.
           start_marker = '                    val videoStream = resolved.video ?: error("Video source is unavailable")\n'
           end_marker = '                    val transferredBytes = video.length() + audio.length()\n'
           start = text.index(start_marker) + len(start_marker)
