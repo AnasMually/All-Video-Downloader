@@ -24,7 +24,7 @@ jobs:
         uses: gradle/actions/wrapper-validation@v4
       - name: Apply Facebook merge and progress fixes
         if: github.event_name == 'push'
-        run: python3 tools/apply-facebook-progress-fixes.py
+        run: python3 tools/apply-facebook-progress-fixes-v2.py
       - name: Build, test and lint
         run: ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug
       - name: Verify heavy media/runtime binaries are absent
