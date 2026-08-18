@@ -1,3 +1,4 @@
+# Trigger after workflow exists on the default branch
 name: Apply combined download progress fix
 on:
   push:
