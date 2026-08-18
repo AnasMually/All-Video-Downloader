@@ -1,0 +1,87 @@
+name: Apply processing retry fix
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-processing-retry-fix.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Apply fix and build
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt')
+          s = p.read_text()
+          old = '''    private suspend fun createFinalMediaWithRecovery(task: DownloadTask, directory: File): File {
+        var firstError: Throwable? = null
+        repeat(2) { attempt ->
+            try {
+                val resolved = api.resolve(task.sourceUrl, task.formatId)
+                return createFinalMedia(task, resolved, directory)
+            } catch (error: Throwable) {
+                if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
+                if (attempt == 0) {
+                    firstError = error
+                    delay(500)
+                } else {
+                    throw error
+                }
+            }
+        }
+        throw firstError ?: IllegalStateException("Unable to resolve download")
+    }
+'''
+          new = '''    private suspend fun createFinalMediaWithRecovery(task: DownloadTask, directory: File): File {
+        // Retry only the lightweight URL-resolution step. Retrying the whole
+        // createFinalMedia pipeline after a mux/processing error caused a fully
+        // downloaded Facebook video to be downloaded a second time before the
+        // same processing error was reported.
+        var resolved: ResolvedDownload? = null
+        var lastResolveError: Throwable? = null
+        repeat(2) { attempt ->
+            try {
+                resolved = api.resolve(task.sourceUrl, task.formatId)
+                return@repeat
+            } catch (error: Throwable) {
+                if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
+                lastResolveError = error
+                if (attempt == 0) delay(500)
+            }
+        }
+        val selected = resolved ?: throw (lastResolveError ?: IllegalStateException("Unable to resolve download"))
+        return createFinalMedia(task, selected, directory)
+    }
+'''
+          if old not in s:
+              raise SystemExit('createFinalMediaWithRecovery block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          p = Path('app/build.gradle.kts')
+          s = p.read_text()
+          s = s.replace('versionCode = 15', 'versionCode = 16', 1)
+          s = s.replace('versionName = "1.6.6"', 'versionName = "1.6.7"', 1)
+          p.write_text(s)
+          PY
+
+          ./gradlew --stacktrace :app:assembleDebug :app:testDebugUnitTest
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt app/build.gradle.kts
+          git commit -m 'Avoid redownloading media after processing failures' || true
+          git push
