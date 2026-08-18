@@ -10,9 +10,9 @@ permissions:
 jobs:
   inspect-live-facebook:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
-      - name: Compare direct Facebook audio and yt-dlp output
+      - name: Probe direct Facebook companion audio
         shell: bash
         run: |
           set -euo pipefail
@@ -27,32 +27,19 @@ jobs:
           BODY="$(jq -nc --arg url "$URL" --arg id "$DOWNLOAD_ID" --arg audio "$AUDIO_TRACK_ID" '{url:$url,download_id:$id,audio_track_id:$audio,adaptive_client:true}')"
           curl -fsS --max-time 120 -H 'Content-Type: application/json' --data "$BODY" "$BASE/resolve.php" > /tmp/resolve.json
           AUDIO_URL="$(jq -r '.download.audio.url' /tmp/resolve.json)"
-          echo '=== LIVE RESOLVE AUDIO ==='
-          jq '{format_id:.download.audio.format_id,protocol:.download.audio.protocol,manifest_url:.download.audio.manifest_url,filesize:.download.audio.filesize,url:.download.audio.url}' /tmp/resolve.json
+          jq '{format_id:.download.audio.format_id,protocol:.download.audio.protocol,fragment_count:(.download.audio.fragments // [] | length),url:.download.audio.url}' /tmp/resolve.json
 
+          curl -fL --max-time 120 "$AUDIO_URL" -o /tmp/direct.m4a
+          ls -l /tmp/direct.m4a
           if ! command -v ffprobe >/dev/null 2>&1; then
             sudo apt-get update -qq
             sudo apt-get install -y -qq ffmpeg
           fi
-          python3 -m pip install --quiet --upgrade yt-dlp
-
-          echo '=== DIRECT URL DOWNLOAD ==='
-          curl -fL --max-time 120 "$AUDIO_URL" -o /tmp/direct.m4a
-          ls -lh /tmp/direct.m4a
-          echo "direct_packets=$(ffprobe -v error -select_streams a:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 /tmp/direct.m4a || true)"
-          ffprobe -v error -show_entries format=format_name,duration,size -show_entries stream=codec_name,codec_type,duration -of json /tmp/direct.m4a || true
-
-          echo '=== YT-DLP ACTUAL BESTAUDIO DOWNLOAD ==='
-          yt-dlp --ignore-config --no-playlist -f bestaudio -o '/tmp/ytdlp.%(ext)s' "$URL"
-          YTDLP_FILE="$(find /tmp -maxdepth 1 -type f -name 'ytdlp.*' | head -n1)"
-          test -n "$YTDLP_FILE"
-          ls -lh "$YTDLP_FILE"
-          echo "ytdlp_packets=$(ffprobe -v error -select_streams a:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 "$YTDLP_FILE" || true)"
-          ffprobe -v error -show_entries format=format_name,duration,size -show_entries stream=codec_name,codec_type,duration -of json "$YTDLP_FILE" || true
-
-          echo '=== RAW FORMAT ==='
-          yt-dlp --ignore-config --no-playlist --skip-download --dump-single-json "$URL" > /tmp/raw.json
-          jq '[.formats[] | select((.vcodec // "none") == "none" and (.acodec // "none") != "none") | {format_id,protocol,ext,abr,manifest_url,fragment_base_url,fragments,url}]' /tmp/raw.json
+          ffprobe -v error -show_entries format=format_name,duration,size -show_entries stream=codec_name,codec_type,duration -of json /tmp/direct.m4a
+          PACKETS="$(ffprobe -v error -select_streams a:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 /tmp/direct.m4a)"
+          echo "direct_audio_packets=$PACKETS"
+          test -n "$PACKETS"
+          test "$PACKETS" -gt 0
 
   build:
     runs-on: ubuntu-latest
