@@ -1,3 +1,4 @@
+# trigger
 name: Apply processing retry fix fast
 on:
   push:
@@ -58,7 +59,6 @@ jobs:
     }
 '''
           if old not in s:
-              # If another job already applied it, make this workflow harmless.
               if 'Only URL resolution is retried' in s:
                   raise SystemExit(0)
               raise SystemExit('retry block not found')
