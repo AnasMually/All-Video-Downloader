@@ -13,8 +13,8 @@
     <string name="show_qualities">عرض الجودات</string>
     <string name="analyzing_link">جارٍ تحليل الرابط…</string>
     <string name="invalid_url">أدخل رابط http أو https صحيحًا.</string>
-    <string name="analysis_failed">تعذر تحليل الرابط.</string>
-    <string name="analysis_failed_with_reason">فشل التحليل: %1$s</string>
+    <string name="analysis_failed">تعذر تحليل الرابط. حاول مرة أخرى.</string>
+    <string name="analysis_failed_with_reason">تعذر تحليل الرابط. حاول مرة أخرى.</string>
     <string name="video">فيديو</string>
     <string name="audio">صوت</string>
     <string name="choose_quality">اختر الجودة</string>
@@ -26,9 +26,9 @@
     <string name="frames_per_second">%1$d إطار/ث</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">الصوت مضمّن في هذا الملف</string>
-    <string name="audio_downloaded_and_merged">سيُنزل صوت متوافق ويُدمج داخل الهاتف</string>
+    <string name="audio_downloaded_and_merged">سيتم دمج الفيديو والصوت تلقائيًا.</string>
     <string name="start_download">بدء التنزيل</string>
-    <string name="m4a_media3_note">يُحوّل الصوت داخل الهاتف إلى M4A ‏(AAC) عبر Google Media3. لا يتضمن التطبيق FFmpeg.</string>
+    <string name="m4a_media3_note">سيُحفظ الصوت بصيغة M4A عند الحاجة إلى التحويل.</string>
     <string name="legal_download_notice">نزّل فقط الوسائط التي تملكها أو لديك إذن من صاحب الحقوق والمنصة بحفظها. لا يتجاوز التطبيق DRM.</string>
 
     <string name="share_sheet_title">تنزيل الرابط المشارك</string>
@@ -47,6 +47,8 @@
     <string name="download_speed_eta">%1$s/ث • متبقٍ %2$s</string>
     <string name="download_speed">%1$s/ث</string>
     <string name="download_eta">متبقٍ %1$s</string>
+    <string name="processing_media">جارٍ تجهيز الملف… %1$d%%</string>
+    <string name="download_failed_user">تعذر إكمال التنزيل. حاول مرة أخرى أو اختر جودة أخرى.</string>
     <string name="waiting_for_wifi">بانتظار Wi‑Fi</string>
     <string name="pause">إيقاف مؤقت</string>
     <string name="resume">استئناف</string>
@@ -109,14 +111,14 @@
     <string name="engine_ready">جاهز</string>
     <string name="engine_initializing">جارٍ التجهيز</string>
     <string name="engine_unavailable">غير متاح</string>
-    <string name="engine_version">إصدار yt-dlp المضمّن: %1$s</string>
+    <string name="engine_version">إصدار المحرك: %1$s</string>
     <string name="app_version">إصدار التطبيق: %1$s</string>
 
     <string name="notification_channel_downloads">التنزيلات النشطة</string>
     <string name="notification_channel_downloads_description">تقدم التنزيلات النشطة وأزرار التحكم بها</string>
     <string name="notification_channel_results">نتائج التنزيل</string>
     <string name="notification_channel_results_description">تنبيهات اكتمال التنزيل أو فشله</string>
-    <string name="preparing_download_engine">جارٍ تجهيز محرك التنزيل داخل الجهاز…</string>
+    <string name="preparing_download_engine">جارٍ تجهيز التنزيل…</string>
     <string name="download_completed">اكتمل التنزيل</string>
     <string name="download_failed">فشل التنزيل</string>
 </resources>
