@@ -385,7 +385,7 @@ class DownloadService : Service() {
                         task.id,
                         90,
                         transferredBytes,
-                        expectedTotal ?: transferredBytes,
+                        transferredBytes,
                         0L,
                         0L,
                     )

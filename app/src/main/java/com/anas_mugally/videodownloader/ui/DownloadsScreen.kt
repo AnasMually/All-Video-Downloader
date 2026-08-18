@@ -256,9 +256,9 @@ private fun DownloadTaskCard(
                     }
                 }
 
-                DownloadStatus.FAILED -> task.error?.let { error ->
+                DownloadStatus.FAILED -> {
                     Text(
-                        text = error,
+                        text = stringResource(R.string.download_failed_user),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
