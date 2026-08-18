@@ -14,7 +14,10 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultDecoderFactory
 import androidx.media3.transformer.EditedMediaItem
@@ -54,11 +57,7 @@ class OnDeviceMediaProcessor(context: Context) {
         )
     }
 
-    /**
-     * Downloads and remuxes an adaptive HLS/DASH stream entirely on the phone.
-     * Media3 reads the manifest/segments from the source CDN with the yt-dlp
-     * supplied HTTP headers and writes a normal local MP4 track for MediaMuxer.
-     */
+    /** Downloads and materializes adaptive HLS/DASH media on the phone. */
     suspend fun materializeAdaptiveStream(stream: MediaStream, output: File) {
         require(stream.isAdaptiveManifest) { "The stream is not adaptive media" }
         output.parentFile?.mkdirs()
@@ -69,7 +68,27 @@ class OnDeviceMediaProcessor(context: Context) {
             .setReadTimeoutMs(60_000)
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(stream.headers)
-        val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+
+        val protocol = stream.protocol.lowercase()
+        val cleanUrl = stream.url.substringBefore('?').lowercase()
+        val isHls = protocol.contains("m3u8") || cleanUrl.endsWith(".m3u8")
+        val isDash = protocol.contains("dash") || cleanUrl.endsWith(".mpd")
+        val sourceMime = when {
+            isHls -> MimeTypes.APPLICATION_M3U8
+            isDash -> MimeTypes.APPLICATION_MPD
+            else -> null
+        }
+
+        // Do not rely on DefaultMediaSourceFactory discovering optional modules at
+        // runtime. Facebook commonly resolves the companion audio as DASH; using
+        // DashMediaSource directly guarantees that the MPD and its media segments
+        // are actually read instead of treating the manifest as a normal file.
+        val mediaSourceFactory: MediaSource.Factory = when {
+            isDash -> DashMediaSource.Factory(httpFactory)
+            isHls -> HlsMediaSource.Factory(httpFactory)
+            else -> DefaultMediaSourceFactory(httpFactory)
+        }
+
         val decoderFactory = DefaultDecoderFactory.Builder(appContext).build()
         val assetLoaderFactory = ExoPlayerAssetLoader.Factory(
             appContext,
@@ -78,12 +97,6 @@ class OnDeviceMediaProcessor(context: Context) {
             mediaSourceFactory,
         )
 
-        val protocol = stream.protocol.lowercase()
-        val sourceMime = when {
-            protocol.contains("m3u8") || stream.url.substringBefore('?').lowercase().endsWith(".m3u8") -> MimeTypes.APPLICATION_M3U8
-            protocol.contains("dash") || stream.url.substringBefore('?').lowercase().endsWith(".mpd") -> MimeTypes.APPLICATION_MPD
-            else -> null
-        }
         val mediaItemBuilder = MediaItem.Builder().setUri(stream.url)
         if (sourceMime != null) mediaItemBuilder.setMimeType(sourceMime)
 
@@ -201,12 +214,6 @@ class OnDeviceMediaProcessor(context: Context) {
             videoExtractor.selectTrack(videoTrack)
             audioExtractor.selectTrack(audioTrack)
 
-            // Separate Facebook/DASH representations can carry non-zero timeline
-            // origins. Writing those absolute timestamps into a fresh MP4 can put
-            // the audio far outside the visible video timeline, producing a file
-            // that technically contains an audio track but plays silently. Treat
-            // each downloaded representation as a standalone clip and rebase its
-            // first sample to t=0 before interleaving the tracks.
             val videoStartTimeUs = videoExtractor.sampleTime
             val audioStartTimeUs = audioExtractor.sampleTime
             require(videoStartTimeUs >= 0L) { "Downloaded video contains no media samples" }
