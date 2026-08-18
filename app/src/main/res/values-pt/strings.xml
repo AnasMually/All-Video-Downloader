@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">O áudio está incluído neste arquivo</string>
-    <string name="audio_downloaded_and_merged">Um áudio compatível será baixado e mesclado no dispositivo</string>
+    <string name="audio_downloaded_and_merged">O vídeo e o áudio serão combinados automaticamente.</string>
     <string name="start_download">Iniciar download</string>
-    <string name="m4a_media3_note">O áudio é convertido no dispositivo para M4A (AAC) com Google Media3. FFmpeg não está incluído.</string>
+    <string name="m4a_media3_note">O áudio será salvo como M4A quando a conversão for necessária.</string>
     <string name="legal_download_notice">Baixe apenas mídia que você possui ou tem permissão do titular dos direitos e da plataforma para salvar. DRM não é contornado.</string>
     <string name="share_sheet_title">Baixar link compartilhado</string>
     <string name="share_sheet_subtitle">O aplicativo anterior permanece visível atrás desta janela compacta.</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">Pronto</string>
     <string name="engine_initializing">Inicializando</string>
     <string name="engine_unavailable">Indisponível</string>
-    <string name="engine_version">yt-dlp incluído: %1$s</string>
+    <string name="engine_version">Versão do mecanismo: %1$s</string>
     <string name="app_version">Versão do app: %1$s</string>
     <string name="notification_channel_downloads">Downloads ativos</string>
     <string name="notification_channel_downloads_description">Progresso e controles para downloads ativos</string>
     <string name="notification_channel_results">Resultados de download</string>
     <string name="notification_channel_results_description">Alertas de downloads concluídos e com falha</string>
-    <string name="preparing_download_engine">Preparando o mecanismo de download no dispositivo…</string>
+    <string name="preparing_download_engine">Preparando o download…</string>
     <string name="download_completed">Download concluído</string>
     <string name="download_failed">Falha no download</string>
     <string name="ad_label">Anúncio</string>

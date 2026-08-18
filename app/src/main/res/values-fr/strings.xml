@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">L’audio est inclus dans ce fichier</string>
-    <string name="audio_downloaded_and_merged">Un audio compatible sera téléchargé et fusionné sur l’appareil</string>
+    <string name="audio_downloaded_and_merged">La vidéo et l’audio seront combinés automatiquement.</string>
     <string name="start_download">Démarrer le téléchargement</string>
-    <string name="m4a_media3_note">L’audio est converti sur l’appareil en M4A (AAC) avec Google Media3. FFmpeg n’est pas inclus.</string>
+    <string name="m4a_media3_note">L’audio sera enregistré en M4A lorsqu’une conversion est nécessaire.</string>
     <string name="legal_download_notice">Téléchargez uniquement les médias que vous possédez ou que le détenteur des droits et la plateforme vous autorisent à enregistrer. Le DRM n’est pas contourné.</string>
     <string name="share_sheet_title">Télécharger le lien partagé</string>
     <string name="share_sheet_subtitle">L’application précédente reste visible derrière cette fenêtre compacte.</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">Prêt</string>
     <string name="engine_initializing">Initialisation</string>
     <string name="engine_unavailable">Indisponible</string>
-    <string name="engine_version">yt-dlp intégré : %1$s</string>
+    <string name="engine_version">Version du moteur : %1$s</string>
     <string name="app_version">Version de l’application : %1$s</string>
     <string name="notification_channel_downloads">Téléchargements actifs</string>
     <string name="notification_channel_downloads_description">Progression et contrôles des téléchargements actifs</string>
     <string name="notification_channel_results">Résultats des téléchargements</string>
     <string name="notification_channel_results_description">Alertes de téléchargements terminés et échoués</string>
-    <string name="preparing_download_engine">Préparation du moteur de téléchargement sur l’appareil…</string>
+    <string name="preparing_download_engine">Préparation du téléchargement…</string>
     <string name="download_completed">Téléchargement terminé</string>
     <string name="download_failed">Échec du téléchargement</string>
     <string name="ad_label">Publicité</string>

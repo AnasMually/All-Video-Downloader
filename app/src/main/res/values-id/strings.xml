@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">Audio sudah termasuk dalam file ini</string>
-    <string name="audio_downloaded_and_merged">Audio yang kompatibel akan diunduh dan digabung di perangkat</string>
+    <string name="audio_downloaded_and_merged">Video dan audio akan digabungkan secara otomatis.</string>
     <string name="start_download">Mulai unduhan</string>
-    <string name="m4a_media3_note">Audio dikonversi di perangkat ke M4A (AAC) dengan Google Media3. FFmpeg tidak disertakan.</string>
+    <string name="m4a_media3_note">Audio akan disimpan sebagai M4A jika perlu dikonversi.</string>
     <string name="legal_download_notice">Unduh hanya media yang Anda miliki atau diizinkan oleh pemegang hak dan platform untuk disimpan. DRM tidak dilewati.</string>
     <string name="share_sheet_title">Unduh tautan yang dibagikan</string>
     <string name="share_sheet_subtitle">Aplikasi sebelumnya tetap terlihat di belakang jendela ringkas ini.</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">Siap</string>
     <string name="engine_initializing">Menginisialisasi</string>
     <string name="engine_unavailable">Tidak tersedia</string>
-    <string name="engine_version">yt-dlp bawaan: %1$s</string>
+    <string name="engine_version">Versi mesin: %1$s</string>
     <string name="app_version">Versi aplikasi: %1$s</string>
     <string name="notification_channel_downloads">Unduhan aktif</string>
     <string name="notification_channel_downloads_description">Progres dan kontrol untuk unduhan aktif</string>
     <string name="notification_channel_results">Hasil unduhan</string>
     <string name="notification_channel_results_description">Peringatan unduhan selesai dan gagal</string>
-    <string name="preparing_download_engine">Menyiapkan mesin unduhan di perangkat…</string>
+    <string name="preparing_download_engine">Menyiapkan unduhan…</string>
     <string name="download_completed">Unduhan selesai</string>
     <string name="download_failed">Unduhan gagal</string>
     <string name="ad_label">Iklan</string>

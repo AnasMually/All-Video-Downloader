@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">इस फ़ाइल में ऑडियो शामिल है</string>
-    <string name="audio_downloaded_and_merged">संगत ऑडियो डाउनलोड होकर डिवाइस पर मर्ज होगा</string>
+    <string name="audio_downloaded_and_merged">वीडियो और ऑडियो अपने आप जोड़ दिए जाएंगे।</string>
     <string name="start_download">डाउनलोड शुरू करें</string>
-    <string name="m4a_media3_note">ऑडियो को डिवाइस पर Google Media3 से M4A (AAC) में बदला जाता है। FFmpeg शामिल नहीं है।</string>
+    <string name="m4a_media3_note">ज़रूरत होने पर ऑडियो M4A में सेव होगा।</string>
     <string name="legal_download_notice">केवल वही मीडिया डाउनलोड करें जो आपका हो या जिसे सहेजने की अनुमति अधिकारधारक और प्लेटफ़ॉर्म से मिली हो। DRM को बायपास नहीं किया जाता।</string>
     <string name="share_sheet_title">शेयर किया लिंक डाउनलोड करें</string>
     <string name="share_sheet_subtitle">पिछला ऐप इस कॉम्पैक्ट विंडो के पीछे दिखाई देता रहेगा।</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">तैयार</string>
     <string name="engine_initializing">शुरू हो रहा है</string>
     <string name="engine_unavailable">उपलब्ध नहीं</string>
-    <string name="engine_version">बंडल yt-dlp: %1$s</string>
+    <string name="engine_version">इंजन संस्करण: %1$s</string>
     <string name="app_version">ऐप संस्करण: %1$s</string>
     <string name="notification_channel_downloads">सक्रिय डाउनलोड</string>
     <string name="notification_channel_downloads_description">सक्रिय डाउनलोड की प्रगति और नियंत्रण</string>
     <string name="notification_channel_results">डाउनलोड परिणाम</string>
     <string name="notification_channel_results_description">पूर्ण और विफल डाउनलोड अलर्ट</string>
-    <string name="preparing_download_engine">डिवाइस डाउनलोड इंजन तैयार हो रहा है…</string>
+    <string name="preparing_download_engine">डाउनलोड तैयार किया जा रहा है…</string>
     <string name="download_completed">डाउनलोड पूर्ण</string>
     <string name="download_failed">डाउनलोड विफल</string>
     <string name="ad_label">विज्ञापन</string>

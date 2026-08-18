@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">এই ফাইলে অডিও অন্তর্ভুক্ত আছে</string>
-    <string name="audio_downloaded_and_merged">সামঞ্জস্যপূর্ণ অডিও ডাউনলোড করে ডিভাইসে মার্জ করা হবে</string>
+    <string name="audio_downloaded_and_merged">ভিডিও ও অডিও স্বয়ংক্রিয়ভাবে একত্র করা হবে।</string>
     <string name="start_download">ডাউনলোড শুরু করুন</string>
-    <string name="m4a_media3_note">Google Media3 দিয়ে ডিভাইসেই অডিও M4A (AAC)-এ রূপান্তর হয়। FFmpeg অন্তর্ভুক্ত নয়।</string>
+    <string name="m4a_media3_note">প্রয়োজন হলে অডিও M4A হিসেবে সংরক্ষণ করা হবে।</string>
     <string name="legal_download_notice">শুধু আপনার মালিকানাধীন বা অধিকারধারী ও প্ল্যাটফর্মের অনুমতি থাকা মিডিয়া ডাউনলোড করুন। DRM এড়ানো হয় না।</string>
     <string name="share_sheet_title">শেয়ার করা লিংক ডাউনলোড করুন</string>
     <string name="share_sheet_subtitle">আগের অ্যাপটি এই ছোট উইন্ডোর পেছনে দৃশ্যমান থাকবে।</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">প্রস্তুত</string>
     <string name="engine_initializing">শুরু হচ্ছে</string>
     <string name="engine_unavailable">উপলভ্য নয়</string>
-    <string name="engine_version">অন্তর্ভুক্ত yt-dlp: %1$s</string>
+    <string name="engine_version">ইঞ্জিন সংস্করণ: %1$s</string>
     <string name="app_version">অ্যাপ ভার্সন: %1$s</string>
     <string name="notification_channel_downloads">সক্রিয় ডাউনলোড</string>
     <string name="notification_channel_downloads_description">সক্রিয় ডাউনলোডের অগ্রগতি ও নিয়ন্ত্রণ</string>
     <string name="notification_channel_results">ডাউনলোড ফলাফল</string>
     <string name="notification_channel_results_description">সম্পন্ন ও ব্যর্থ ডাউনলোডের সতর্কতা</string>
-    <string name="preparing_download_engine">ডিভাইসের ডাউনলোড ইঞ্জিন প্রস্তুত হচ্ছে…</string>
+    <string name="preparing_download_engine">ডাউনলোড প্রস্তুত করা হচ্ছে…</string>
     <string name="download_completed">ডাউনলোড সম্পন্ন</string>
     <string name="download_failed">ডাউনলোড ব্যর্থ</string>
     <string name="ad_label">বিজ্ঞাপন</string>

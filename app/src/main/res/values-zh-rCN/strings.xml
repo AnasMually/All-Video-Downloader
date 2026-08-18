@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">此文件已包含音频</string>
-    <string name="audio_downloaded_and_merged">将下载兼容音频并在设备上合并</string>
+    <string name="audio_downloaded_and_merged">视频和音频将自动合并。</string>
     <string name="start_download">开始下载</string>
-    <string name="m4a_media3_note">音频会在设备上使用 Google Media3 转换为 M4A (AAC)。应用不包含 FFmpeg。</string>
+    <string name="m4a_media3_note">需要转换时，音频将保存为 M4A。</string>
     <string name="legal_download_notice">仅下载您拥有或已获得权利人及平台许可保存的媒体。不会绕过 DRM。</string>
     <string name="share_sheet_title">下载分享的链接</string>
     <string name="share_sheet_subtitle">上一个应用会显示在此紧凑窗口后方。</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">就绪</string>
     <string name="engine_initializing">初始化中</string>
     <string name="engine_unavailable">不可用</string>
-    <string name="engine_version">内置 yt-dlp：%1$s</string>
+    <string name="engine_version">引擎版本：%1$s</string>
     <string name="app_version">应用版本：%1$s</string>
     <string name="notification_channel_downloads">进行中的下载</string>
     <string name="notification_channel_downloads_description">进行中下载的进度和控制</string>
     <string name="notification_channel_results">下载结果</string>
     <string name="notification_channel_results_description">下载完成和失败提醒</string>
-    <string name="preparing_download_engine">正在准备设备端下载引擎…</string>
+    <string name="preparing_download_engine">正在准备下载…</string>
     <string name="download_completed">下载完成</string>
     <string name="download_failed">下载失败</string>
     <string name="ad_label">广告</string>

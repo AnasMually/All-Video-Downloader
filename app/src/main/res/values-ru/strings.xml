@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">Аудио включено в этот файл</string>
-    <string name="audio_downloaded_and_merged">Совместимое аудио будет скачано и объединено на устройстве</string>
+    <string name="audio_downloaded_and_merged">Видео и аудио будут объединены автоматически.</string>
     <string name="start_download">Начать загрузку</string>
-    <string name="m4a_media3_note">Аудио преобразуется на устройстве в M4A (AAC) с помощью Google Media3. FFmpeg не включён.</string>
+    <string name="m4a_media3_note">При необходимости преобразования аудио будет сохранено в M4A.</string>
     <string name="legal_download_notice">Скачивайте только медиа, которыми вы владеете или на сохранение которых у вас есть разрешение правообладателя и платформы. DRM не обходится.</string>
     <string name="share_sheet_title">Скачать общую ссылку</string>
     <string name="share_sheet_subtitle">Предыдущее приложение остаётся видимым за этим компактным окном.</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">Готов</string>
     <string name="engine_initializing">Инициализация</string>
     <string name="engine_unavailable">Недоступен</string>
-    <string name="engine_version">Встроенный yt-dlp: %1$s</string>
+    <string name="engine_version">Версия движка: %1$s</string>
     <string name="app_version">Версия приложения: %1$s</string>
     <string name="notification_channel_downloads">Активные загрузки</string>
     <string name="notification_channel_downloads_description">Прогресс и управление активными загрузками</string>
     <string name="notification_channel_results">Результаты загрузок</string>
     <string name="notification_channel_results_description">Уведомления о завершённых и неудачных загрузках</string>
-    <string name="preparing_download_engine">Подготовка движка загрузки на устройстве…</string>
+    <string name="preparing_download_engine">Подготовка загрузки…</string>
     <string name="download_completed">Загрузка завершена</string>
     <string name="download_failed">Ошибка загрузки</string>
     <string name="ad_label">Реклама</string>

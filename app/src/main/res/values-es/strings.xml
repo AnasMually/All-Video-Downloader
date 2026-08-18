@@ -27,9 +27,9 @@
     <string name="frames_per_second">%1$d FPS</string>
     <string name="video_dimensions">%1$d×%2$d</string>
     <string name="audio_included">El audio está incluido en este archivo</string>
-    <string name="audio_downloaded_and_merged">Se descargará audio compatible y se combinará en el dispositivo</string>
+    <string name="audio_downloaded_and_merged">El video y el audio se combinarán automáticamente.</string>
     <string name="start_download">Iniciar descarga</string>
-    <string name="m4a_media3_note">El audio se convierte en el dispositivo a M4A (AAC) con Google Media3. FFmpeg no está incluido.</string>
+    <string name="m4a_media3_note">El audio se guardará como M4A cuando sea necesario convertirlo.</string>
     <string name="legal_download_notice">Descarga solo contenido que te pertenezca o que tengas permiso del titular y de la plataforma para guardar. No se omite DRM.</string>
     <string name="share_sheet_title">Descargar enlace compartido</string>
     <string name="share_sheet_subtitle">La aplicación anterior permanece visible detrás de esta ventana compacta.</string>
@@ -107,13 +107,13 @@
     <string name="engine_ready">Listo</string>
     <string name="engine_initializing">Inicializando</string>
     <string name="engine_unavailable">No disponible</string>
-    <string name="engine_version">yt-dlp incluido: %1$s</string>
+    <string name="engine_version">Versión del motor: %1$s</string>
     <string name="app_version">Versión de la app: %1$s</string>
     <string name="notification_channel_downloads">Descargas activas</string>
     <string name="notification_channel_downloads_description">Progreso y controles de descargas activas</string>
     <string name="notification_channel_results">Resultados de descarga</string>
     <string name="notification_channel_results_description">Alertas de descargas completadas y fallidas</string>
-    <string name="preparing_download_engine">Preparando el motor de descarga del dispositivo…</string>
+    <string name="preparing_download_engine">Preparando la descarga…</string>
     <string name="download_completed">Descarga completada</string>
     <string name="download_failed">Descarga fallida</string>
     <string name="ad_label">Anuncio</string>
