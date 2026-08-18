@@ -1,0 +1,85 @@
+name: Apply combined download progress fix
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-combined-progress-fix.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Apply progress fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt')
+          s = p.read_text()
+          old = '''                    val expectedTotal = resolved.fileSize
+                        ?: if (videoStream.fileSize != null && audioStream.fileSize != null) {
+                            videoStream.fileSize + audioStream.fileSize
+                        } else {
+                            null
+                        }
+
+                    beginAggregateProgress(task.id, expectedTotal)
+'''
+          new = '''                    // Resolve the size of both streams before the first byte is
+                    // downloaded whenever possible. This keeps video + companion
+                    // audio on one continuous progress scale instead of letting the
+                    // video alone reach 90% and then appearing to start over.
+                    val videoExpectedBytes = streamTotalBytes(videoStream)
+                    val audioExpectedBytes = streamTotalBytes(audioStream)
+                    val expectedTotal = if (videoExpectedBytes != null && audioExpectedBytes != null) {
+                        videoExpectedBytes + audioExpectedBytes
+                    } else {
+                        resolved.fileSize
+                    }
+
+                    beginAggregateProgress(task.id, expectedTotal)
+'''
+          if old not in s:
+              raise SystemExit('expectedTotal block not found')
+          s = s.replace(old, new, 1)
+
+          anchor = '''    private fun probeRangeSupport(stream: MediaStream): RangeSupport? {
+'''
+          helper = '''    private fun streamTotalBytes(stream: MediaStream): Long? {
+        stream.fileSize?.takeIf { it > 0L }?.let { return it }
+        // The Content-Length of a manifest describes only the manifest document,
+        // not all of its media segments, so never use it as the final media size.
+        if (stream.isAdaptiveManifest) return null
+        return probeRangeSupport(stream)?.totalBytes?.takeIf { it > 0L }
+    }
+
+'''
+          if anchor not in s:
+              raise SystemExit('probeRangeSupport anchor not found')
+          s = s.replace(anchor, helper + anchor, 1)
+          p.write_text(s)
+
+          p = Path('app/build.gradle.kts')
+          s = p.read_text()
+          s = s.replace('versionCode = 14', 'versionCode = 15', 1)
+          s = s.replace('versionName = "1.6.5"', 'versionName = "1.6.6"', 1)
+          p.write_text(s)
+          PY
+
+          ./gradlew --stacktrace :app:assembleDebug :app:testDebugUnitTest
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt app/build.gradle.kts
+          git commit -m 'Keep merged downloads on one progress scale'
+          git push
