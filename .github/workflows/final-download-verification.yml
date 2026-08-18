@@ -1,4 +1,4 @@
-# final verification after localized user-facing messages
+# final verification after all localized end-user copy updates
 name: Verify final download build
 on:
   push:
