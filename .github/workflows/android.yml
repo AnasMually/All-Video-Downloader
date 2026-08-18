@@ -5,9 +5,73 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  patch-pr7:
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/facebook-fragmented-streams'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/facebook-fragmented-streams
+          fetch-depth: 0
+      - name: Stop deterministic re-downloads and repair indentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt')
+          text = p.read_text()
+
+          old = '''            } catch (error: Throwable) {
+                if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
+                if (attempt == 0) {
+                    firstError = error
+                    delay(500)
+                } else {
+                    throw error
+                }
+            }
+'''
+          new = '''            } catch (error: Throwable) {
+                if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
+                // A media/container validation failure is deterministic. Retrying the
+                // complete transfer only downloads the same broken payload again while
+                // progress is already near the processing phase.
+                if (error is InvalidDownloadedMediaException) throw error
+                if (attempt == 0) {
+                    firstError = error
+                    delay(500)
+                } else {
+                    throw error
+                }
+            }
+'''
+          if old not in text:
+              raise SystemExit('retry block not found')
+          text = text.replace(old, new, 1)
+
+          start_marker = '                    val videoStream = resolved.video ?: error("Video source is unavailable")\n'
+          end_marker = '                    updateProgress(\n'
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          block = text[start:end]
+          block = ''.join(('          ' + line) if line.strip() else line for line in block.splitlines(keepends=True))
+          text = text[:start] + block + text[end:]
+
+          p.write_text(text)
+          PY
+
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt
+          git commit -m 'Stop retrying deterministic media failures'
+          git push origin HEAD:fix/facebook-fragmented-streams
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
