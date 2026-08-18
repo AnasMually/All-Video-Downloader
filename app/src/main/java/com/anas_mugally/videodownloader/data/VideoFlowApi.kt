@@ -43,11 +43,17 @@ data class MediaStream(
 ) {
     val isAdaptiveManifest: Boolean
         get() {
-            val normalized = protocol.lowercase()
+            val normalizedProtocol = protocol.lowercase()
+            val normalizedAudioCodec = audioCodec?.lowercase().orEmpty()
+            val needsHeAacNormalization = isAudioOnly && (
+                normalizedAudioCodec.contains("mp4a.40.5") ||
+                    normalizedAudioCodec.contains("mp4a.40.29")
+                )
             return fragments.isNotEmpty() ||
-                normalized.contains("m3u8") ||
-                normalized.contains("dash") ||
-                normalized.contains("segments") ||
+                needsHeAacNormalization ||
+                normalizedProtocol.contains("m3u8") ||
+                normalizedProtocol.contains("dash") ||
+                normalizedProtocol.contains("segments") ||
                 url.substringBefore('?').lowercase().let { it.endsWith(".m3u8") || it.endsWith(".mpd") }
         }
 
