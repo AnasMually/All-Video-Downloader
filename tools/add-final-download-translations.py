@@ -8,7 +8,7 @@ translations = {
     'values-bn': ('ফাইল প্রস্তুত করা হচ্ছে… %1$d%%', 'ডাউনলোড সম্পন্ন করা যায়নি। আবার চেষ্টা করুন অথবা অন্য মান বেছে নিন।'),
     'values-fr': ('Préparation du fichier… %1$d%%', 'Impossible de terminer le téléchargement. Réessayez ou choisissez une autre qualité.'),
     'values-es': ('Procesando archivo… %1$d%%', 'No se pudo completar la descarga. Inténtalo de nuevo o elige otra calidad.'),
-    'values-zh': ('正在处理文件… %1$d%%', '无法完成下载。请重试或选择其他画质。'),
+    'values-zh-rCN': ('正在处理文件… %1$d%%', '无法完成下载。请重试或选择其他画质。'),
 }
 
 for folder, (processing, failed) in translations.items():
