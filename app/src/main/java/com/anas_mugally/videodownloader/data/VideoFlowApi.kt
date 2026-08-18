@@ -23,6 +23,13 @@ data class EngineState(
     val error: String? = null,
 )
 
+data class MediaFragment(
+    val url: String? = null,
+    val path: String? = null,
+    val fileSize: Long? = null,
+    val durationSeconds: Double? = null,
+)
+
 data class MediaStream(
     val url: String,
     val headers: Map<String, String>,
@@ -31,11 +38,14 @@ data class MediaStream(
     val protocol: String = "",
     val videoCodec: String? = null,
     val audioCodec: String? = null,
+    val fragmentBaseUrl: String? = null,
+    val fragments: List<MediaFragment> = emptyList(),
 ) {
     val isAdaptiveManifest: Boolean
         get() {
             val normalized = protocol.lowercase()
-            return normalized.contains("m3u8") ||
+            return fragments.isNotEmpty() ||
+                normalized.contains("m3u8") ||
                 normalized.contains("dash") ||
                 normalized.contains("segments") ||
                 url.substringBefore('?').lowercase().let { it.endsWith(".m3u8") || it.endsWith(".mpd") }
@@ -242,6 +252,25 @@ class VideoFlowApi {
                 }
             }
         }
+        val fragments = buildList {
+            val array = item.optJSONArray("fragments")
+            if (array != null) {
+                for (index in 0 until array.length()) {
+                    val fragment = array.optJSONObject(index) ?: continue
+                    val url = fragment.optString("url").takeIf(String::isNotBlank)
+                    val path = fragment.optString("path").takeIf(String::isNotBlank)
+                    if (url == null && path == null) continue
+                    add(
+                        MediaFragment(
+                            url = url,
+                            path = path,
+                            fileSize = fragment.optLong("filesize", -1L).takeIf { it > 0L },
+                            durationSeconds = fragment.optDouble("duration", -1.0).takeIf { it >= 0.0 },
+                        ),
+                    )
+                }
+            }
+        }
         return MediaStream(
             url = item.getString("url"),
             headers = headers,
@@ -250,6 +279,8 @@ class VideoFlowApi {
             protocol = item.optString("protocol"),
             videoCodec = item.optString("vcodec").takeIf { it.isNotBlank() && !it.equals("none", true) },
             audioCodec = item.optString("acodec").takeIf { it.isNotBlank() && !it.equals("none", true) },
+            fragmentBaseUrl = item.optString("fragment_base_url").takeIf(String::isNotBlank),
+            fragments = fragments,
         )
     }
 
