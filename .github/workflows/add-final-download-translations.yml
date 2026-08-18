@@ -1,3 +1,4 @@
+# corrected Chinese resource path
 name: Apply final download translations
 on:
   push:
