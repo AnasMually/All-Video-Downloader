@@ -11,8 +11,8 @@ android {
         applicationId = "com.anas_mugally.videodownloader"
         minSdk = 29
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.6.4"
+        versionCode = 14
+        versionName = "1.6.5"
         vectorDrawables.useSupportLibrary = true
 
         buildConfigField(
@@ -70,6 +70,7 @@ dependencies {
     implementation("androidx.media3:media3-transformer:1.5.1")
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.5.1")
+    implementation("androidx.media3:media3-exoplayer-dash:1.5.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
