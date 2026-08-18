@@ -1,3 +1,4 @@
+# trigger after workflow is present on main
 name: Apply processing retry fix
 on:
   push:
@@ -52,10 +53,10 @@ jobs:
         // same processing error was reported.
         var resolved: ResolvedDownload? = null
         var lastResolveError: Throwable? = null
-        repeat(2) { attempt ->
+        for (attempt in 0..1) {
             try {
                 resolved = api.resolve(task.sourceUrl, task.formatId)
-                return@repeat
+                break
             } catch (error: Throwable) {
                 if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
                 lastResolveError = error
