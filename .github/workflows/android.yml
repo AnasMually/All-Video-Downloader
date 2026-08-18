@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   patch-pr7:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/facebook-fragmented-streams'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,8 +80,6 @@ jobs:
               raise SystemExit('mux audio block not found')
           text = text.replace(old_merge, new_merge, 1)
 
-          # Fix the suspicious indentation in the same merge block so lint reaches
-          # the actual code under test.
           start_marker = '                    val videoStream = resolved.video ?: error("Video source is unavailable")\n'
           end_marker = '                    val transferredBytes = video.length() + audio.length()\n'
           start = text.index(start_marker) + len(start_marker)
