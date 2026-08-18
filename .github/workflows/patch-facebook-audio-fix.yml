@@ -1,0 +1,107 @@
+name: Patch Facebook companion audio fix
+
+on:
+  push:
+    branches:
+      - fix/facebook-fragmented-streams
+    paths:
+      - '.github/workflows/patch-facebook-audio-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/facebook-fragmented-streams
+          fetch-depth: 0
+      - name: Apply deterministic media fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt')
+          text = p.read_text()
+
+          old_retry = '''            } catch (error: Throwable) {
+                if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
+                if (attempt == 0) {
+                    firstError = error
+                    delay(500)
+                } else {
+                    throw error
+                }
+            }
+'''
+          new_retry = '''            } catch (error: Throwable) {
+                if (error is CancellationException || requestedStops.containsKey(task.id)) throw error
+                // A media/container validation failure is deterministic. Re-resolving
+                // and downloading the same bytes again only makes progress appear to
+                // restart at ~90% and wastes the user's bandwidth.
+                if (error is InvalidDownloadedMediaException) throw error
+                if (attempt == 0) {
+                    firstError = error
+                    delay(500)
+                } else {
+                    throw error
+                }
+            }
+'''
+          if old_retry not in text:
+              raise SystemExit('recovery block not found')
+          text = text.replace(old_retry, new_retry, 1)
+
+          old_merge = '''                    val muxAudio = if (
+                        audioStream.extension.equals("m4a", true) ||
+                        audioStream.extension.equals("mp4", true)
+                    ) {
+                        audio
+                    } else {
+                        updateProgress(task.id, 92, speedBytesPerSecond = 0L, etaSeconds = 0L)
+                        File(directory, "$NORMALIZED_AUDIO_STEM.m4a").also { normalized ->
+                            mediaProcessor.convertToM4a(audio, normalized)
+                        }
+                    }
+'''
+          new_merge = '''                    // File extension is not a compatibility guarantee. Facebook can
+                    // return a perfectly valid HE-AAC M4A that ffmpeg/Media3 can read
+                    // while Android MediaExtractor exposes no samples. Normalize every
+                    // companion track through Media3 before platform MediaMuxer sees it.
+                    // This is an on-device remux/transcode; it does not re-download data.
+                    updateProgress(task.id, 92, speedBytesPerSecond = 0L, etaSeconds = 0L)
+                    val muxAudio = File(directory, "$NORMALIZED_AUDIO_STEM.m4a").also { normalized ->
+                        mediaProcessor.convertToM4a(audio, normalized)
+                    }
+'''
+          if old_merge not in text:
+              raise SystemExit('mux audio block not found')
+          text = text.replace(old_merge, new_merge, 1)
+
+          # Repair the pre-existing suspicious indentation around the merge path so
+          # lint can validate the actual fix instead of failing before analysis.
+          start_marker = '                    val videoStream = resolved.video ?: error("Video source is unavailable")\n'
+          end_marker = '                    val transferredBytes = video.length() + audio.length()\n'
+          start = text.index(start_marker) + len(start_marker)
+          end = text.index(end_marker, start)
+          block = text[start:end]
+          fixed_lines = []
+          for line in block.splitlines(keepends=True):
+              if line.startswith('          '):
+                  line = '          ' + line
+              fixed_lines.append(line)
+          text = text[:start] + ''.join(fixed_lines) + text[end:]
+
+          p.write_text(text)
+          PY
+
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/anas_mugally/videodownloader/download/DownloadService.kt
+          git commit -m 'Normalize companion audio before Android muxing'
+          git push origin HEAD:fix/facebook-fragmented-streams
