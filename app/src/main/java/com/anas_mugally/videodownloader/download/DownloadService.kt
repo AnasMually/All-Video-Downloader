@@ -359,28 +359,34 @@ class DownloadService : Service() {
             DownloadKind.VIDEO -> {
                 if (resolved.requiresMerge) {
                     val videoStream = resolved.video ?: error("Video source is unavailable")
-                    val audioStream = resolved.audio ?: error("Audio source is unavailable")
-                    val expectedTotal = resolved.fileSize
-                        ?: if (videoStream.fileSize != null && audioStream.fileSize != null) {
-                            videoStream.fileSize + audioStream.fileSize
-                        } else {
-                            null
-                        }
+          val audioStream = resolved.audio ?: error("Audio source is unavailable")
+          // Use a byte-accurate combined scale when both stream sizes are
+          // known. If either size is unknown, reserve 0-75% for the video
+          // and 75-90% for companion audio so progress never reaches 90%
+          // after only the first stream and then appears to download again.
+          val expectedTotal = if (videoStream.fileSize != null && audioStream.fileSize != null) {
+              videoStream.fileSize + audioStream.fileSize
+          } else {
+              null
+          }
+          val useAggregateBytes = expectedTotal != null && expectedTotal > 0L
+          if (useAggregateBytes) beginAggregateProgress(task.id, expectedTotal)
 
-                    beginAggregateProgress(task.id, expectedTotal)
-                    val video: File
-                    val audio: File
-                    try {
-                        video = downloadStream(task, videoStream, directory, SOURCE_VIDEO_STEM, 0, 90)
-                        throwIfStopRequested(task.id)
-                        aggregateProgressOffsetBytes = video.length()
-                        audio = downloadStream(task, audioStream, directory, COMPANION_AUDIO_STEM, 0, 90)
-                        throwIfStopRequested(task.id)
-                    } finally {
-                        endAggregateProgress(task.id)
-                    }
+          val video: File
+          val audio: File
+          try {
+              val videoEnd = if (useAggregateBytes) 90 else 75
+              video = downloadStream(task, videoStream, directory, SOURCE_VIDEO_STEM, 0, videoEnd)
+              throwIfStopRequested(task.id)
+              if (useAggregateBytes) aggregateProgressOffsetBytes = video.length()
+              val audioStart = if (useAggregateBytes) 0 else videoEnd
+              audio = downloadStream(task, audioStream, directory, COMPANION_AUDIO_STEM, audioStart, 90)
+              throwIfStopRequested(task.id)
+          } finally {
+              if (useAggregateBytes) endAggregateProgress(task.id)
+          }
 
-                    val transferredBytes = video.length() + audio.length()
+          val transferredBytes = video.length() + audio.length()
                     updateProgress(
                         task.id,
                         90,

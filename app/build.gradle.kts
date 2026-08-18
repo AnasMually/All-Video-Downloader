@@ -11,8 +11,8 @@ android {
         applicationId = "com.anas_mugally.videodownloader"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.6.5"
+        versionCode = 15
+        versionName = "1.6.6"
         vectorDrawables.useSupportLibrary = true
 
         buildConfigField(
