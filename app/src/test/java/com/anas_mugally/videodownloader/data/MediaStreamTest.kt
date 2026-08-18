@@ -22,6 +22,22 @@ class MediaStreamTest {
     }
 
     @Test
+    fun directHeAacV2AudioUsesMedia3NormalizationPath() {
+        val stream = MediaStream(
+            url = "https://video.xx.fbcdn.net/audio-v2.mp4",
+            headers = emptyMap(),
+            extension = "mp4",
+            fileSize = 752_208L,
+            protocol = "https",
+            videoCodec = null,
+            audioCodec = "mp4a.40.29",
+        )
+
+        assertTrue(stream.isAudioOnly)
+        assertTrue(stream.isAdaptiveManifest)
+    }
+
+    @Test
     fun ordinaryDirectAacLcAudioKeepsNormalDownloadPath() {
         val stream = MediaStream(
             url = "https://cdn.example/audio.m4a",
