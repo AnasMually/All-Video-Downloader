@@ -9,6 +9,7 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import androidx.annotation.RequiresApi
 import com.anas_mugally.videodownloader.VideoDownloaderApp
 import com.anas_mugally.videodownloader.data.AppRepository
@@ -57,6 +58,9 @@ class DownloadService : Service() {
     private var currentTaskId: String? = null
     private var foregroundStarted = false
     private var recoveredInterruptedTasks = false
+    private var aggregateProgressTaskId: String? = null
+    private var aggregateProgressOffsetBytes = 0L
+    private var aggregateProgressTotalBytes: Long? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -105,7 +109,7 @@ class DownloadService : Service() {
             mediaProcessor.cancelActive()
             serviceScope.launch {
                 repository.updateTask(activeId) { task ->
-                    task.copy(status = DownloadStatus.FAILED, error = "Android foreground-service timeout")
+                    task.copy(status = DownloadStatus.FAILED, error = getString(com.anas_mugally.videodownloader.R.string.download_failed_user))
                 }
             }
         }
@@ -354,28 +358,54 @@ class DownloadService : Service() {
 
             DownloadKind.VIDEO -> {
                 if (resolved.requiresMerge) {
-                    val videoStream = resolved.video ?: error("API did not return the video stream")
-                    val audioStream = resolved.audio ?: error("API did not return the audio stream")
-                    val video = downloadStream(task, videoStream, directory, SOURCE_VIDEO_STEM, 0, 72)
-                    throwIfStopRequested(task.id)
-                    val audio = downloadStream(task, audioStream, directory, COMPANION_AUDIO_STEM, 72, 88)
-                    throwIfStopRequested(task.id)
+                    val videoStream = resolved.video ?: error("Video source is unavailable")
+                    val audioStream = resolved.audio ?: error("Audio source is unavailable")
+                    val expectedTotal = resolved.fileSize
+                        ?: if (videoStream.fileSize != null && audioStream.fileSize != null) {
+                            videoStream.fileSize + audioStream.fileSize
+                        } else {
+                            null
+                        }
+
+                    beginAggregateProgress(task.id, expectedTotal)
+                    val video: File
+                    val audio: File
+                    try {
+                        video = downloadStream(task, videoStream, directory, SOURCE_VIDEO_STEM, 0, 90)
+                        throwIfStopRequested(task.id)
+                        aggregateProgressOffsetBytes = video.length()
+                        audio = downloadStream(task, audioStream, directory, COMPANION_AUDIO_STEM, 0, 90)
+                        throwIfStopRequested(task.id)
+                    } finally {
+                        endAggregateProgress(task.id)
+                    }
+
+                    val transferredBytes = video.length() + audio.length()
+                    updateProgress(
+                        task.id,
+                        90,
+                        transferredBytes,
+                        expectedTotal ?: transferredBytes,
+                        0L,
+                        0L,
+                    )
+
                     val muxAudio = if (
                         audioStream.extension.equals("m4a", true) ||
                         audioStream.extension.equals("mp4", true)
                     ) {
                         audio
                     } else {
-                        updateProgress(task.id, 90)
+                        updateProgress(task.id, 92, speedBytesPerSecond = 0L, etaSeconds = 0L)
                         File(directory, "$NORMALIZED_AUDIO_STEM.m4a").also { normalized ->
                             mediaProcessor.convertToM4a(audio, normalized)
                         }
                     }
                     throwIfStopRequested(task.id)
-                    updateProgress(task.id, 95)
+                    updateProgress(task.id, 95, speedBytesPerSecond = 0L, etaSeconds = 0L)
                     val output = File(directory, DownloadFormatTools.outputFileName(task, "mp4"))
                     mediaProcessor.muxMp4(video, muxAudio, output) { requestedStops.containsKey(task.id) }
-                    updateProgress(task.id, 99)
+                    updateProgress(task.id, 99, speedBytesPerSecond = 0L, etaSeconds = 0L)
                     output
                 } else {
                     val stream = resolved.stream ?: error("API did not return a direct video stream")
@@ -840,6 +870,20 @@ class DownloadService : Service() {
         activeConnections.clear()
     }
 
+    private fun beginAggregateProgress(taskId: String, totalBytes: Long?) {
+        aggregateProgressTaskId = taskId
+        aggregateProgressOffsetBytes = 0L
+        aggregateProgressTotalBytes = totalBytes
+    }
+
+    private fun endAggregateProgress(taskId: String) {
+        if (aggregateProgressTaskId == taskId) {
+            aggregateProgressTaskId = null
+            aggregateProgressOffsetBytes = 0L
+            aggregateProgressTotalBytes = null
+        }
+    }
+
     private suspend fun updateProgress(
         taskId: String,
         percent: Int,
@@ -848,14 +892,41 @@ class DownloadService : Service() {
         speedBytesPerSecond: Long? = null,
         etaSeconds: Long? = null,
     ) {
+        val aggregating = aggregateProgressTaskId == taskId && downloadedBytes != null
+        val effectiveDownloaded = if (aggregating) {
+            aggregateProgressOffsetBytes + requireNotNull(downloadedBytes)
+        } else {
+            downloadedBytes
+        }
+        val effectiveTotal = if (aggregating) {
+            aggregateProgressTotalBytes ?: totalBytes?.let { aggregateProgressOffsetBytes + it }
+        } else {
+            totalBytes
+        }
+        val effectivePercent = if (
+            aggregating && effectiveDownloaded != null && effectiveTotal != null && effectiveTotal > 0L
+        ) {
+            ((effectiveDownloaded * 90.0) / effectiveTotal).roundToInt().coerceIn(0, 90)
+        } else {
+            percent
+        }
+        val effectiveEta = if (
+            aggregating && effectiveDownloaded != null && effectiveTotal != null &&
+            speedBytesPerSecond != null && speedBytesPerSecond > 0L
+        ) {
+            ((effectiveTotal - effectiveDownloaded).coerceAtLeast(0L) / speedBytesPerSecond)
+        } else {
+            etaSeconds
+        }
+
         repository.updateTask(taskId) { task ->
             if (task.status == DownloadStatus.DOWNLOADING) {
                 task.copy(
-                    progress = maxOf(task.progress, percent.coerceIn(0, 99)),
-                    downloadedBytes = downloadedBytes ?: task.downloadedBytes,
-                    totalBytes = totalBytes ?: task.totalBytes,
+                    progress = maxOf(task.progress, effectivePercent.coerceIn(0, 99)),
+                    downloadedBytes = effectiveDownloaded ?: task.downloadedBytes,
+                    totalBytes = effectiveTotal ?: task.totalBytes,
                     speedBytesPerSecond = speedBytesPerSecond ?: task.speedBytesPerSecond,
-                    etaSeconds = etaSeconds ?: task.etaSeconds,
+                    etaSeconds = effectiveEta ?: task.etaSeconds,
                 )
             } else {
                 task
@@ -879,12 +950,10 @@ class DownloadService : Service() {
         }
     }
 
-    private fun readableError(error: Throwable): String = error.message
-        ?.lineSequence()
-        ?.lastOrNull { it.isNotBlank() }
-        ?.trim()
-        ?.take(MAX_ERROR_LENGTH)
-        ?: error::class.java.simpleName
+    private fun readableError(error: Throwable): String {
+        Log.e("DownloadService", "Download failed", error)
+        return getString(com.anas_mugally.videodownloader.R.string.download_failed_user)
+    }
 
     private fun promoteToForeground() {
         if (foregroundStarted) return

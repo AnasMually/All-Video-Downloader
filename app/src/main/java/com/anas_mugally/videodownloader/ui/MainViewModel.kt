@@ -258,7 +258,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 repository.updateTask(task.id) { saved ->
-                    saved.copy(status = DownloadStatus.FAILED, error = error.message?.take(240))
+                    saved.copy(status = DownloadStatus.FAILED, error = app.getString(R.string.download_failed_user))
                 }
                 _events.emit(UiEvent(R.string.download_failed))
             }
@@ -301,11 +301,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun userFacingError(error: Throwable): String {
         if (error is IllegalArgumentException) return app.getString(R.string.invalid_url)
-        val technical = when (error) {
-            is ApiException -> error.code
-            else -> error.message
-        }?.lineSequence()?.lastOrNull { it.isNotBlank() }?.trim()?.take(240)
-        return if (technical.isNullOrBlank()) app.getString(R.string.analysis_failed)
-        else app.getString(R.string.analysis_failed_with_reason, technical)
+        return app.getString(R.string.analysis_failed)
     }
 }
