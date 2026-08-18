@@ -8,39 +8,6 @@ permissions:
   contents: read
 
 jobs:
-  inspect-live-facebook:
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - name: Probe direct Facebook companion audio
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE='https://anasmugally.vps.webdock.cloud/VideoDownloader/api/v1'
-          URL='https://www.facebook.com/share/v/1BydnA1d1H/'
-
-          curl -fsS --max-time 120 -H 'Content-Type: application/json' \
-            --data "$(jq -nc --arg url "$URL" '{url:$url,adaptive_client:true}')" \
-            "$BASE/extract.php" > /tmp/extract.json
-          DOWNLOAD_ID="$(jq -r '.video.downloads[] | select(.requires_merge == true) | .id' /tmp/extract.json | head -n1)"
-          AUDIO_TRACK_ID="$(jq -r '.video.default_audio_track_id // empty' /tmp/extract.json)"
-          BODY="$(jq -nc --arg url "$URL" --arg id "$DOWNLOAD_ID" --arg audio "$AUDIO_TRACK_ID" '{url:$url,download_id:$id,audio_track_id:$audio,adaptive_client:true}')"
-          curl -fsS --max-time 120 -H 'Content-Type: application/json' --data "$BODY" "$BASE/resolve.php" > /tmp/resolve.json
-          AUDIO_URL="$(jq -r '.download.audio.url' /tmp/resolve.json)"
-          jq '{format_id:.download.audio.format_id,protocol:.download.audio.protocol,fragment_count:(.download.audio.fragments // [] | length),url:.download.audio.url}' /tmp/resolve.json
-
-          curl -fL --max-time 120 "$AUDIO_URL" -o /tmp/direct.m4a
-          ls -l /tmp/direct.m4a
-          if ! command -v ffprobe >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq ffmpeg
-          fi
-          ffprobe -v error -show_entries format=format_name,duration,size -show_entries stream=codec_name,codec_type,duration -of json /tmp/direct.m4a
-          PACKETS="$(ffprobe -v error -select_streams a:0 -count_packets -show_entries stream=nb_read_packets -of default=nw=1:nk=1 /tmp/direct.m4a)"
-          echo "direct_audio_packets=$PACKETS"
-          test -n "$PACKETS"
-          test "$PACKETS" -gt 0
-
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
