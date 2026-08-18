@@ -8,6 +8,9 @@ import com.anas_mugally.videodownloader.domain.DownloadTask
 
 object DownloadProgressText {
     fun primary(context: Context, task: DownloadTask): String {
+        if (task.progress >= 90 && (task.speedBytesPerSecond ?: 0L) <= 0L) {
+            return context.getString(R.string.processing_media, task.progress)
+        }
         val downloaded = task.downloadedBytes
         val total = task.totalBytes
         return if (downloaded != null && total != null && total > 0L) {
@@ -23,6 +26,7 @@ object DownloadProgressText {
     }
 
     fun secondary(context: Context, task: DownloadTask): String? {
+        if (task.progress >= 90 && (task.speedBytesPerSecond ?: 0L) <= 0L) return null
         val speed = task.speedBytesPerSecond?.takeIf { it > 0L }
             ?.let { Formatter.formatShortFileSize(context, it) }
         val eta = task.etaSeconds?.takeIf { it >= 0L }
