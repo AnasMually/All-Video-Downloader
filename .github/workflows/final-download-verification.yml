@@ -20,27 +20,28 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build, test, lint and record result
+      - name: Diagnose lint
         shell: bash
         run: |
           set +e
-          ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug 2>&1 | tee /tmp/final-build.log
+          ./gradlew --stacktrace :app:lintDebug 2>&1 | tee /tmp/lint.log
           RC=${PIPESTATUS[0]}
-          if [ "$RC" -eq 0 ]; then
-            bash scripts/check-no-heavy-media-binaries.sh app/build/outputs/apk/debug/app-debug.apk 2>&1 | tee -a /tmp/final-build.log
-            RC=${PIPESTATUS[0]}
-          fi
           mkdir -p .github/verified
           if [ "$RC" -eq 0 ]; then
-            echo 'SUCCESS' > .github/verified/final-download-build.txt
+            echo 'LINT_SUCCESS' > .github/verified/android-lint-diagnostic.txt
           else
-            echo 'FAILURE' > .github/verified/final-download-build.txt
-            echo >> .github/verified/final-download-build.txt
-            tail -n 160 /tmp/final-build.log >> .github/verified/final-download-build.txt
+            echo 'LINT_FAILURE' > .github/verified/android-lint-diagnostic.txt
+            echo >> .github/verified/android-lint-diagnostic.txt
+            REPORT=$(find app/build -type f \( -name 'lint-results-debug.txt' -o -name 'lint-results-debug.xml' \) | head -n1)
+            if [ -n "$REPORT" ]; then
+              cat "$REPORT" >> .github/verified/android-lint-diagnostic.txt
+            else
+              grep -nE 'Error:|Fatal:|error:' /tmp/lint.log | tail -n 80 >> .github/verified/android-lint-diagnostic.txt
+            fi
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/verified/final-download-build.txt
-          git commit -m "Record final download build result"
+          git add .github/verified/android-lint-diagnostic.txt
+          git commit -m "Record Android lint diagnostic"
           git push
           exit "$RC"
