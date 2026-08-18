@@ -119,4 +119,6 @@
     <string name="ad_label">Publicité</string>
     <string name="recommended_app">Application recommandée</string>
     <string name="download_app">Télécharger l’app</string>
+    <string name="processing_media">Préparation du fichier… %1$d%%</string>
+    <string name="download_failed_user">Impossible de terminer le téléchargement. Réessayez ou choisissez une autre qualité.</string>
 </resources>

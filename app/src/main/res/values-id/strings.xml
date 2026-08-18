@@ -119,4 +119,6 @@
     <string name="ad_label">Iklan</string>
     <string name="recommended_app">Aplikasi rekomendasi</string>
     <string name="download_app">Unduh aplikasi</string>
+    <string name="processing_media">Memproses file… %1$d%%</string>
+    <string name="download_failed_user">Unduhan tidak dapat diselesaikan. Coba lagi atau pilih kualitas lain.</string>
 </resources>

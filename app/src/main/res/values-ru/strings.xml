@@ -119,4 +119,6 @@
     <string name="ad_label">Реклама</string>
     <string name="recommended_app">Рекомендуемое приложение</string>
     <string name="download_app">Скачать приложение</string>
+    <string name="processing_media">Подготовка файла… %1$d%%</string>
+    <string name="download_failed_user">Не удалось завершить загрузку. Повторите попытку или выберите другое качество.</string>
 </resources>

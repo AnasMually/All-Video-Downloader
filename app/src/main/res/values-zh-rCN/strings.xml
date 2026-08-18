@@ -119,4 +119,6 @@
     <string name="ad_label">广告</string>
     <string name="recommended_app">推荐应用</string>
     <string name="download_app">下载应用</string>
+    <string name="processing_media">正在处理文件… %1$d%%</string>
+    <string name="download_failed_user">无法完成下载。请重试或选择其他画质。</string>
 </resources>

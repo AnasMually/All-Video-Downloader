@@ -119,4 +119,6 @@
     <string name="ad_label">বিজ্ঞাপন</string>
     <string name="recommended_app">প্রস্তাবিত অ্যাপ</string>
     <string name="download_app">অ্যাপ ডাউনলোড করুন</string>
+    <string name="processing_media">ফাইল প্রস্তুত করা হচ্ছে… %1$d%%</string>
+    <string name="download_failed_user">ডাউনলোড সম্পন্ন করা যায়নি। আবার চেষ্টা করুন অথবা অন্য মান বেছে নিন।</string>
 </resources>

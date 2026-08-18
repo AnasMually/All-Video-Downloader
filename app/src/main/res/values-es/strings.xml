@@ -119,4 +119,6 @@
     <string name="ad_label">Anuncio</string>
     <string name="recommended_app">Aplicación recomendada</string>
     <string name="download_app">Descargar app</string>
+    <string name="processing_media">Procesando archivo… %1$d%%</string>
+    <string name="download_failed_user">No se pudo completar la descarga. Inténtalo de nuevo o elige otra calidad.</string>
 </resources>
