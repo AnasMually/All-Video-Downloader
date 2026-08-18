@@ -8,11 +8,11 @@ permissions:
   contents: read
 
 jobs:
-  verify-live-facebook:
+  inspect-live-facebook:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Verify deployed Facebook fragment audio
+      - name: Inspect deployed resolve and raw yt-dlp audio formats
         shell: bash
         run: |
           set -euo pipefail
@@ -23,58 +23,21 @@ jobs:
             -H 'Content-Type: application/json' \
             --data "$(jq -nc --arg url "$URL" '{url:$url,adaptive_client:true}')" \
             "$BASE/extract.php" > /tmp/extract.json
-
           DOWNLOAD_ID="$(jq -r '.video.downloads[] | select(.requires_merge == true) | .id' /tmp/extract.json | head -n1)"
           AUDIO_TRACK_ID="$(jq -r '.video.default_audio_track_id // empty' /tmp/extract.json)"
-          test -n "$DOWNLOAD_ID"
-
           if [ -n "$AUDIO_TRACK_ID" ]; then
             BODY="$(jq -nc --arg url "$URL" --arg id "$DOWNLOAD_ID" --arg audio "$AUDIO_TRACK_ID" '{url:$url,download_id:$id,audio_track_id:$audio,adaptive_client:true}')"
           else
             BODY="$(jq -nc --arg url "$URL" --arg id "$DOWNLOAD_ID" '{url:$url,download_id:$id,adaptive_client:true}')"
           fi
+          curl -fsS --max-time 120 -H 'Content-Type: application/json' --data "$BODY" "$BASE/resolve.php" > /tmp/resolve.json
+          echo '=== LIVE RESOLVE AUDIO ==='
+          jq '{format_id:.download.audio.format_id,protocol:.download.audio.protocol,filesize:.download.audio.filesize,fragment_base_url:.download.audio.fragment_base_url,fragment_count:(.download.audio.fragments // [] | length),url:.download.audio.url}' /tmp/resolve.json
 
-          curl -fsS --max-time 120 \
-            -H 'Content-Type: application/json' \
-            --data "$BODY" \
-            "$BASE/resolve.php" > /tmp/resolve.json
-
-          jq '{ok,error,audio_protocol:.download.audio.protocol,audio_fragments:(.download.audio.fragments // [] | length),audio_url:.download.audio.url}' /tmp/resolve.json
-          jq -e '.ok == true and (.download.audio.fragments | type == "array" and length > 1)' /tmp/resolve.json >/dev/null
-
-          python3 - <<'PY'
-          import json, pathlib, urllib.parse, urllib.request
-          root = json.load(open('/tmp/resolve.json', encoding='utf-8'))
-          stream = root['download']['audio']
-          base = stream.get('fragment_base_url') or stream['url']
-          headers = {str(k): str(v) for k, v in (stream.get('headers') or {}).items() if k and v}
-          out = pathlib.Path('/tmp/facebook-audio-fragmented.mp4')
-          with out.open('wb') as sink:
-              for index, fragment in enumerate(stream['fragments']):
-                  target = fragment.get('url') or urllib.parse.urljoin(base, fragment.get('path') or '')
-                  if not target:
-                      raise SystemExit(f'fragment {index} has no URL')
-                  req = urllib.request.Request(target, headers=headers)
-                  with urllib.request.urlopen(req, timeout=60) as response:
-                      data = response.read()
-                  if not data:
-                      raise SystemExit(f'fragment {index} is empty')
-                  expected = fragment.get('filesize')
-                  if expected and len(data) != int(expected):
-                      raise SystemExit(f'fragment {index}: got {len(data)}, expected {expected}')
-                  sink.write(data)
-          print(f'assembled_bytes={out.stat().st_size}')
-          if out.stat().st_size <= 1024:
-              raise SystemExit('assembled media is too small')
-          PY
-
-          if ! command -v ffprobe >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq ffmpeg
-          fi
-          ffprobe -v error -select_streams a:0 -show_entries packet=size -of csv=p=0 \
-            /tmp/facebook-audio-fragmented.mp4 | head -n1 | grep -Eq '^[0-9]+'
-          echo 'live_facebook_audio_samples=ok'
+          python3 -m pip install --quiet --upgrade yt-dlp
+          yt-dlp --ignore-config --no-playlist --skip-download --dump-single-json "$URL" > /tmp/raw.json
+          echo '=== RAW AUDIO-ONLY FORMATS ==='
+          jq '[.formats[] | select((.vcodec // "none") == "none" and (.acodec // "none") != "none") | {format_id,protocol,ext,abr,tbr,filesize,filesize_approx,manifest_url,fragment_base_url,fragment_type:(if has("fragments") then (.fragments|type) else "missing" end),fragment_count:(if (.fragments|type?) == "array" then (.fragments|length) else 0 end),first_fragment:(if (.fragments|type?) == "array" then .fragments[0] else null end),url}]' /tmp/raw.json
 
   build:
     runs-on: ubuntu-latest
